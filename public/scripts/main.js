@@ -1,30 +1,36 @@
 const previousCommands = [];
-currentDirectory = null;
+currentDirectory = "wyattlake";
 commandIdx = 0;
 
 class FileObject {
-    constructor(name, content, children, imagePath) {
+    constructor(name, content, children, imagePath, parent) {
         this.name = name;
         this.content = content;
         this.children = children;
         this.imagePath = imagePath;
+        this.parent = parent;
+    }
+
+    addChild(child) {
+        child.parent = this;
+        this.children.push(child);
     }
 }
 
 function createFile(name, content) {
-    return new FileObject(name, content, null, null);
+    return new FileObject(name, content, null, null, "wyattlake");
 }
 
-function createFolder(name, children) {
-    return new FileObject(name, null, children, null);
+function createFolder(name) {
+    return new FileObject(name, null, [], null, "wyattlake");
 }
 
 function createImage(name, imagePath) {
-    return new FileObject(name, null, null, imagePath);
+    return new FileObject(name, null, null, imagePath, "wyattlake");
 }
 
 function getFile(filename, directory) {
-    if (directory == null) {
+    if (directory == "wyattlake") {
         for (i = 0; i < files.length; i++) {
             if (files[i].name == filename) {
                 return files[i];
@@ -41,21 +47,26 @@ function getFile(filename, directory) {
     return null;
 }
 
+folder = createFolder("folder");
+folder.addChild(
+    createFile(
+        "folder.txt",
+        "Not really sure why I added folder functionality..."
+    )
+);
+
 const files = [
     createFile(
         "welcome.txt",
-        "Welcome to my website. Type help to get started"
+        "Welcome to my website. Type help to get started!"
     ),
     createImage("joe.jpeg", "images/joe.jpeg"),
-    createFolder("folder", [
-        createFile("file3.txt", "files3"),
-        createFile("file4.txt", "files4"),
-    ]),
+    folder,
 ];
 
 function listFiles(directory) {
     result = "";
-    if (directory == null) {
+    if (directory == "wyattlake") {
         for (i = 0; i < files.length; i++) {
             result += files[i].name + "\n";
         }
@@ -74,6 +85,23 @@ function parsePath(input) {
     fileIdx = 0;
     while (fileIdx < inputFiles.length) {
         currentFile = inputFiles[fileIdx];
+        if (currentFile == "..") {
+            if (fileIdx + 1 == inputFiles.length) {
+                return parentFolder.parent;
+            } else {
+                parentFolder = parentFolder.parent;
+                fileIdx++;
+                continue;
+            }
+        } else if (currentFile == ".") {
+            if (fileIdx + 1 == inputFiles.length) {
+                return parentFolder == null ? "wyattlake" : parentFolder;
+            } else {
+                fileIdx++;
+                continue;
+            }
+        }
+
         file = getFile(currentFile, parentFolder);
 
         if (file != null) {
@@ -100,7 +128,7 @@ function parseInput(input) {
                 } else if (words.length == 2) {
                     directory = parsePath(words[1]);
                     if (directory != null) {
-                        return ["ls", istFiles(directory)];
+                        return ["ls", listFiles(directory)];
                     } else {
                         return ["ls", "Invalid path"];
                     }
@@ -111,6 +139,12 @@ function parseInput(input) {
                     file = parsePath(words[1]);
                     if (file != null) {
                         if (file.children == null) {
+                            if (file.imagePath != null) {
+                                return [
+                                    "cat",
+                                    "Use the view command to view images",
+                                ];
+                            }
                             return ["cat", file.content];
                         }
                         return ["cat", file.name + " is a directory"];
@@ -124,7 +158,7 @@ function parseInput(input) {
             case "pages":
                 return [
                     "pages",
-                    "index - The page you are currently on\ncontroversial - Some controversial stuff",
+                    "index - The main page of this website\nabout - About me",
                 ];
             case "view":
                 if (words.length == 2) {
@@ -139,34 +173,40 @@ function parseInput(input) {
             case "ssh":
                 if (words.length == 2) {
                     switch (words[1]) {
-                        case "controversial":
+                        case "about":
+                            return ["ssh", "Success", "/about.html"];
+                        default:
                             return [
                                 "ssh",
-                                "Switching pages...",
-                                "/controversial.html",
+                                "Not a valid page. Run the pages command to see the page list",
                             ];
                     }
                 }
                 break;
             case "cd":
                 if (words.length == 1) {
-                    currentDirectory = null;
+                    currentDirectory = "wyattlake";
                     return ["cd", ""];
                 } else if (words.length == 2) {
                     fileObject = parsePath(words[1]);
-                    if (fileObject != null) {
+                    if (fileObject == "wyattlake") {
+                        currentDirectory = "wyattlake";
+                        return ["cd", ""];
+                    } else if (fileObject != null) {
                         if (fileObject.children == null) {
                             return [
                                 "cd",
                                 fileObject.name + " is not a directory",
                             ];
                         }
+
                         currentDirectory = fileObject;
                         return ["cd", ""];
                     } else {
                         return ["cd", "Invalid path"];
                     }
                 }
+                break;
             case "help":
                 return [
                     "help",
@@ -215,16 +255,20 @@ document.addEventListener("keypress", function (event) {
             textDiv.appendChild(response);
         } else {
             if ((parseResult[0] = "cd")) {
-                if (currentDirectory == null) {
+                if (currentDirectory == "wyattlake") {
                     prefix.textContent = "wyattlake >";
                 } else {
                     prefix.textContent =
                         "wyattlake/" + currentDirectory.name + " >";
                 }
             }
+
             const parseSplits = parseResult[1].split("\n");
 
             for (i = 0; i < parseSplits.length; i++) {
+                if (i + 1 == parseSplits.length && parseSplits[i] == "") {
+                    break;
+                }
                 const response = document.createElement("p");
                 response.textContent = parseSplits[i];
                 textDiv.appendChild(response);
@@ -232,5 +276,6 @@ document.addEventListener("keypress", function (event) {
         }
 
         inputElement.value = "";
+        window.scrollTo(0, document.body.scrollHeight);
     }
 });
