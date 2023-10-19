@@ -1,13 +1,12 @@
-const previousCommands = [];
 currentDirectory = "wyattlake";
-commandIdx = 0;
 
 class FileObject {
-    constructor(name, content, children, imagePath, parent) {
+    constructor(name, content, children, imagePath, script, parent) {
         this.name = name;
         this.content = content;
         this.children = children;
         this.imagePath = imagePath;
+        this.script = script;
         this.parent = parent;
     }
 
@@ -18,15 +17,19 @@ class FileObject {
 }
 
 function createFile(name, content) {
-    return new FileObject(name, content, null, null, "wyattlake");
+    return new FileObject(name, content, null, null, null, "wyattlake");
 }
 
 function createFolder(name) {
-    return new FileObject(name, null, [], null, "wyattlake");
+    return new FileObject(name, null, [], null, null, "wyattlake");
 }
 
 function createImage(name, imagePath) {
-    return new FileObject(name, null, null, imagePath, "wyattlake");
+    return new FileObject(name, null, null, imagePath, null, "wyattlake");
+}
+
+function createScript(name, script) {
+    return new FileObject(name, null, null, null, script, "wyattlake");
 }
 
 function getFile(filename, directory) {
@@ -46,23 +49,6 @@ function getFile(filename, directory) {
 
     return null;
 }
-
-folder = createFolder("folder");
-folder.addChild(
-    createFile(
-        "folder.txt",
-        "Not really sure why I added folder functionality..."
-    )
-);
-
-const files = [
-    createFile(
-        "welcome.txt",
-        "Welcome to my website. Type help to get started!"
-    ),
-    createImage("joe.jpeg", "images/joe.jpeg"),
-    folder,
-];
 
 function listFiles(directory) {
     result = "";
@@ -119,6 +105,10 @@ function parsePath(input) {
 }
 
 function parseInput(input) {
+    if (input == "") {
+        return ["none", ""];
+    }
+
     const words = input.split(" ");
     if (words.length > 0) {
         switch (words[0]) {
@@ -144,6 +134,11 @@ function parseInput(input) {
                                     "cat",
                                     "Use the view command to view images",
                                 ];
+                            } else if (file.script != null) {
+                                return [
+                                    "cat",
+                                    "Use the bash command to run scripts",
+                                ];
                             }
                             return ["cat", file.content];
                         }
@@ -163,11 +158,14 @@ function parseInput(input) {
             case "view":
                 if (words.length == 2) {
                     file = parsePath(words[1]);
-                    console.log(file);
-                    if (file.imagePath != null) {
-                        return ["view", "Success", file.imagePath];
+                    if (file != null) {
+                        if (file.imagePath != null) {
+                            return ["view", "Success", file.imagePath];
+                        } else {
+                            return ["view", "File is not an image"];
+                        }
                     } else {
-                        return ["view", "File is not an image."];
+                        return ["view", "Invalid path"];
                     }
                 }
             case "ssh":
@@ -175,6 +173,8 @@ function parseInput(input) {
                     switch (words[1]) {
                         case "about":
                             return ["ssh", "Success", "/about.html"];
+                        case "index":
+                            return ["ssh", "Success", "/"];
                         default:
                             return [
                                 "ssh",
@@ -207,75 +207,99 @@ function parseInput(input) {
                     }
                 }
                 break;
+            case "bash":
+                if (words.length == 2) {
+                    file = parsePath(words[1]);
+                    if (file != null) {
+                        if (file.script != null) {
+                            return [
+                                "bash",
+                                "Executed " + file.name,
+                                file.script,
+                            ];
+                        } else {
+                            return ["bash", "File is not an script"];
+                        }
+                    } else {
+                        return ["bash", "Invalid path"];
+                    }
+                }
             case "help":
                 return [
                     "help",
-                    "ls - lists files in a directory\ncd - changes the current directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages\nview - views an image",
+                    "ls - lists files in a directory\ncd - changes the current directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages\nview - views an image\nbash - runs a .sh file",
                 ];
         }
     }
     return ["none", "Invalid command"];
 }
 
-document.addEventListener("keypress", function (event) {
-    const prefix = document.getElementById("prefix");
-    const inputElement = document.getElementById("myText");
-    const textDiv = document.getElementById("previousText");
-    const inputArea = document.getElementById("inputArea");
+function setup() {
+    document.addEventListener("keypress", function (event) {
+        const prefix = document.getElementById("prefix");
+        const inputElement = document.getElementById("myText");
+        const textDiv = document.getElementById("previousText");
+        const inputArea = document.getElementById("inputArea");
 
-    if (event.key === "Enter") {
-        const oldCommand = document.createElement("p");
-        oldCommand.textContent = prefix.textContent + " " + inputElement.value;
-        textDiv.appendChild(oldCommand);
+        if (event.key === "Enter") {
+            const oldCommand = document.createElement("p");
+            oldCommand.textContent =
+                prefix.textContent + " " + inputElement.value;
+            textDiv.appendChild(oldCommand);
 
-        previousCommands.push(oldCommand.value);
-        commandIdx++;
+            const parseResult = parseInput(inputElement.value);
 
-        const parseResult = parseInput(inputElement.value);
-
-        if (parseResult[0] == "clear") {
-            textDiv.innerHTML = "";
-        } else if (parseResult[0] == "ssh" && parseResult[2] != null) {
-            const response = document.createElement("p");
-            response.textContent = "Switching pages...";
-
-            inputArea.style.display = "none";
-            textDiv.appendChild(response);
-
-            setTimeout(() => {
-                document.location.href = parseResult[2];
-                setTimeout(() => {
-                    inputArea.style.display = "flex";
-                }, 1000);
-            }, 500);
-        } else if (parseResult[0] == "view" && parseResult[1] == "Success") {
-            const response = document.createElement("img");
-            response.src = parseResult[2];
-            response.style.height = "200px";
-            textDiv.appendChild(response);
-        } else {
-            if ((parseResult[0] = "cd")) {
-                if (currentDirectory == "wyattlake") {
-                    prefix.textContent = "wyattlake >";
-                } else {
-                    prefix.textContent =
-                        "wyattlake/" + currentDirectory.name + " >";
-                }
-            }
-
-            const parseSplits = parseResult[1].split("\n");
-
-            for (i = 0; i < parseSplits.length; i++) {
-                if (i + 1 == parseSplits.length && parseSplits[i] == "") {
-                    break;
-                }
+            if (parseResult[0] == "clear") {
+                textDiv.innerHTML = "";
+            } else if (parseResult[0] == "ssh" && parseResult[2] != null) {
                 const response = document.createElement("p");
-                response.textContent = parseSplits[i];
-                textDiv.appendChild(response);
-            }
-        }
+                response.textContent = "Switching pages...";
 
-        inputElement.value = "";
-        window.scrollTo(0, document.body.scrollHeight);
-    }
-});
+                inputArea.style.display = "none";
+                textDiv.appendChild(response);
+
+                setTimeout(() => {
+                    document.location.href = parseResult[2];
+                    setTimeout(() => {
+                        inputArea.style.display = "flex";
+                    }, 1000);
+                }, 500);
+            } else if (
+                parseResult[0] == "view" &&
+                parseResult[1] == "Success"
+            ) {
+                const response = document.createElement("img");
+                response.src = parseResult[2];
+                response.style.height = "200px";
+                textDiv.appendChild(response);
+            } else {
+                if (parseResult[0] == "cd") {
+                    if (currentDirectory == "wyattlake") {
+                        prefix.textContent = "wyattlake >";
+                    } else {
+                        prefix.textContent =
+                            "wyattlake/" + currentDirectory.name + " >";
+                    }
+                }
+
+                const parseSplits = parseResult[1].split("\n");
+
+                for (i = 0; i < parseSplits.length; i++) {
+                    if (i + 1 == parseSplits.length && parseSplits[i] == "") {
+                        break;
+                    }
+                    const response = document.createElement("p");
+                    response.textContent = parseSplits[i];
+                    textDiv.appendChild(response);
+                }
+
+                if (parseResult[0] == "bash" && parseResult[2] != null) {
+                    parseResult[2]();
+                }
+            }
+
+            inputElement.value = "";
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+    });
+}
