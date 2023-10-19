@@ -1,4 +1,5 @@
 const previousCommands = [];
+currentDirectory = null;
 commandIdx = 0;
 
 class FileObject {
@@ -63,7 +64,7 @@ function listFiles(directory) {
 
 function parsePath(input) {
     inputFiles = input.split("/");
-    parentFolder = null;
+    parentFolder = currentDirectory;
 
     fileIdx = 0;
     while (fileIdx < inputFiles.length) {
@@ -90,13 +91,13 @@ function parseInput(input) {
         switch (words[0]) {
             case "ls":
                 if (words.length == 1) {
-                    return listFiles(null);
+                    return ["ls", listFiles(currentDirectory)];
                 } else if (words.length == 2) {
-                    directory = getFile(words[1]);
+                    directory = parsePath(words[1]);
                     if (directory != null) {
-                        return listFiles(directory);
+                        return ["ls", istFiles(directory)];
                     } else {
-                        return "Invalid path";
+                        return ["ls", "Invalid path"];
                     }
                 }
                 break;
@@ -105,42 +106,67 @@ function parseInput(input) {
                     file = parsePath(words[1]);
                     if (file != null) {
                         if (file.children == null) {
-                            return file.content;
+                            return ["cat", file.content];
                         }
-                        return file.name + " is a directory";
+                        return ["cat", file.name + " is a directory"];
                     } else {
-                        return "Invalid path";
+                        return ["cat", "Invalid path"];
                     }
                 }
                 break;
             case "clear":
-                return null;
+                return ["clear", null];
             case "pages":
-                return "/ - The page you are currently on\ncontroversial - Some controversial stuff";
+                return [
+                    "pages",
+                    "/ - The page you are currently on\ncontroversial - Some controversial stuff",
+                ];
             case "ssh":
-                console.log("hi");
                 if (words.length == 2) {
                     switch (words[1]) {
                         case "controversial":
                             document.location.href = "/controversial.html";
-                            return "Switching pages...";
+                            return ["ssh", "Switching pages..."];
                     }
                 }
                 break;
+            case "cd":
+                if (words.length == 1) {
+                    currentDirectory = null;
+                    return ["cd", ""];
+                } else if (words.length == 2) {
+                    fileObject = parsePath(words[1]);
+                    if (fileObject != null) {
+                        if (fileObject.children == null) {
+                            return [
+                                "cd",
+                                fileObject.name + " is not a directory",
+                            ];
+                        }
+                        currentDirectory = fileObject;
+                        return ["cd", ""];
+                    } else {
+                        return ["cd", "Invalid path"];
+                    }
+                }
             case "help":
-                return "ls - lists files in a directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages";
+                return [
+                    "help",
+                    "ls - lists files in a directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages",
+                ];
         }
     }
-    return "Invalid command";
+    return ["none", "Invalid command"];
 }
 
 document.addEventListener("keypress", function (event) {
+    const prefix = document.getElementById("prefix");
     const inputElement = document.getElementById("myText");
     const textDiv = document.getElementById("previousText");
 
     if (event.key === "Enter") {
         const oldCommand = document.createElement("p");
-        oldCommand.textContent = "wyattlake > " + inputElement.value;
+        oldCommand.textContent = prefix.textContent + " " + inputElement.value;
         textDiv.appendChild(oldCommand);
 
         previousCommands.push(oldCommand.value);
@@ -148,14 +174,24 @@ document.addEventListener("keypress", function (event) {
 
         const parseResult = parseInput(inputElement.value);
 
-        if (parseResult == null) {
+        if (parseResult[0] == "clear") {
             textDiv.innerHTML = "";
         } else {
-            const parseSplits = parseResult.split("\n");
+            const parseSplits = parseResult[1].split("\n");
+
             for (i = 0; i < parseSplits.length; i++) {
                 const response = document.createElement("p");
                 response.textContent = parseSplits[i];
                 textDiv.appendChild(response);
+            }
+
+            if ((parseResult[0] = "cd")) {
+                if (currentDirectory == null) {
+                    prefix.textContent = "wyattlake >";
+                } else {
+                    prefix.textContent =
+                        "wyattlake/" + currentDirectory.name + " >";
+                }
             }
         }
 
