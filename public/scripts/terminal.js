@@ -233,7 +233,7 @@ function parseInput(input) {
             case "help":
                 return [
                     "help",
-                    "ls - lists files in a directory\ncd - changes the current directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages\nview - views an image\nbash - runs a .sh file\nswap - swaps pages (had to actually complete the assignment at)",
+                    "ls - lists files in a directory\ncd - changes the current directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages\nview - views an image\nbash - runs a .sh file\nswap - swaps pages (had to actually complete the assignment)",
                 ];
         }
     }
