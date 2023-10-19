@@ -1,28 +1,33 @@
+currentPage = "about";
+
 folder = createFolder("controversy");
 folder.addChild(createFile("controversy.txt", "I am controversial"));
 
-rainbow = false;
-
 function animateText() {
-    if (!rainbow) {
-        const inputElement = document.getElementById("myText");
-        inputElement.style.animation = "rainbow 5s linear infinite";
+    const inputElement = document.getElementById("myText");
+    inputElement.style.animation = "rainbow 5s linear infinite";
 
-        stylesheet = Array.from(document.styleSheets)[
-            document.styleSheets.length - 1
-        ];
+    stylesheets = Array.from(document.styleSheets);
 
-        stylesheet.insertRule("* { animation: rainbow 5s linear infinite }");
-
-        rainbow = true;
+    for (i = 0; i < stylesheets.length; i++) {
+        if (
+            stylesheets[i].href.toString().indexOf("about.css") != -1 ||
+            stylesheets[i].href.toString().indexOf("index.css") != -1
+        ) {
+            stylesheets[i].insertRule(
+                "p, label { animation: rainbow 5s linear infinite }"
+            );
+        }
     }
 }
 
-const files = [
+files = [
     createFile("about.txt", "I am 17"),
     createImage("me.jpg", "images/me.jpg"),
     createScript("animation.sh", animateText),
     folder,
 ];
 
-setup();
+if (!addedEventListeners) {
+    setup();
+}

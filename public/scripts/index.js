@@ -1,3 +1,5 @@
+currentPage = "index";
+
 folder = createFolder("folder");
 folder.addChild(
     createFile(
@@ -6,7 +8,7 @@ folder.addChild(
     )
 );
 
-const files = [
+files = [
     createFile(
         "welcome.txt",
         "Welcome to my website. Type help to get started!"
@@ -15,4 +17,6 @@ const files = [
     folder,
 ];
 
-setup();
+if (!addedEventListeners) {
+    setup();
+}

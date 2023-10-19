@@ -1,5 +1,7 @@
 currentDirectory = "wyattlake";
 
+addedEventListeners = false;
+
 class FileObject {
     constructor(name, content, children, imagePath, script, parent) {
         this.name = name;
@@ -168,6 +170,7 @@ function parseInput(input) {
                         return ["view", "Invalid path"];
                     }
                 }
+                break;
             case "ssh":
                 if (words.length == 2) {
                     switch (words[1]) {
@@ -224,10 +227,13 @@ function parseInput(input) {
                         return ["bash", "Invalid path"];
                     }
                 }
+                break;
+            case "swap":
+                return ["swap", "Swapping page..."];
             case "help":
                 return [
                     "help",
-                    "ls - lists files in a directory\ncd - changes the current directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages\nview - views an image\nbash - runs a .sh file",
+                    "ls - lists files in a directory\ncd - changes the current directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages\nview - views an image\nbash - runs a .sh file\nswap - swaps pages (had to actually complete the assignment at)",
                 ];
         }
     }
@@ -236,10 +242,14 @@ function parseInput(input) {
 
 function setup() {
     document.addEventListener("keypress", function (event) {
+        addedEventListeners = true;
+
         const prefix = document.getElementById("prefix");
         const inputElement = document.getElementById("myText");
         const textDiv = document.getElementById("previousText");
         const inputArea = document.getElementById("inputArea");
+
+        inputElement.focus();
 
         if (event.key === "Enter") {
             const oldCommand = document.createElement("p");
@@ -263,6 +273,52 @@ function setup() {
                     setTimeout(() => {
                         inputArea.style.display = "flex";
                     }, 1000);
+                }, 500);
+            } else if (parseResult[0] == "swap") {
+                const response = document.createElement("p");
+                response.textContent = "Switching pages...";
+
+                inputArea.style.display = "none";
+                textDiv.appendChild(response);
+
+                setTimeout(() => {
+                    pageToAdd = currentPage == "index" ? "about" : "index";
+
+                    textDiv.innerHTML = "";
+
+                    headChildren = document.head.children;
+                    console.log(currentPage);
+
+                    for (i = 0; i < headChildren.length; i++) {
+                        if (
+                            headChildren[i].getAttribute("src") ==
+                                "scripts/" + currentPage + ".js" ||
+                            headChildren[i].getAttribute("href") ==
+                                "styles/" + currentPage + ".css"
+                        ) {
+                            document.head.removeChild(headChildren[i]);
+                        }
+                    }
+
+                    newScript = document.createElement("script");
+                    newScript.setAttribute(
+                        "src",
+                        "scripts/" + pageToAdd + ".js"
+                    );
+
+                    document.head.appendChild(newScript);
+
+                    var newLink = document.createElement("link");
+
+                    newLink.type = "text/css";
+                    newLink.rel = "stylesheet";
+                    newLink.href = "styles/" + pageToAdd + ".css";
+
+                    document.head.appendChild(newLink);
+
+                    inputArea.style.display = "flex";
+
+                    currentPage = pageToAdd;
                 }, 500);
             } else if (
                 parseResult[0] == "view" &&

@@ -4,47 +4,12 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>wyattlake.sh</title>
-        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="styles/style.css" />
+        <link rel="stylesheet" href="styles/about.css" />
         <link rel="icon" type="image/x-icon" href="/images/favicon.ico" />
-        <script src="scripts/terminal.js"></script>
-        <script src="scripts/about.js"></script>
+        <script defer src="scripts/terminal.js"></script>
+        <script defer src="scripts/about.js"></script>
     </head>
-    <style>
-        @keyframes rainbow {
-            0% {
-                color: red;
-            }
-            14% {
-                color: orange;
-            }
-            28% {
-                color: yellow;
-            }
-            42% {
-                color: green;
-            }
-            57% {
-                color: blue;
-            }
-            71% {
-                color: indigo;
-            }
-            85% {
-                color: violet;
-            }
-            100% {
-                color: red;
-            }
-        }
-
-        * {
-            color: #47d4ff;
-        }
-
-        input {
-            color: #47d4ff;
-        }
-    </style>
     <body>
         <div id="previousText"></div>
         <div class="inputArea" id="inputArea">
@@ -56,6 +21,8 @@
                 name="myText"
                 placeholder="Type help for a list of commands"
                 spellcheck="false"
+                autocomplete="off"
+                aria-autocomplete="none"
             />
         </div>
     </body>
