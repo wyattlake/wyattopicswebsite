@@ -36,7 +36,10 @@ function getFile(filename, directory) {
 }
 
 const files = [
-    createFile("file.txt", "files"),
+    createFile(
+        "welcome.txt",
+        "Welcome to my website. Type help to get started"
+    ),
     createFile("file2.txt", "files2"),
     createFolder("folder", [
         createFile("file3.txt", "files3"),
@@ -112,8 +115,20 @@ function parseInput(input) {
                 break;
             case "clear":
                 return null;
+            case "pages":
+                return "/ - The page you are currently on\ncontroversial - Some controversial stuff";
+            case "ssh":
+                console.log("hi");
+                if (words.length == 2) {
+                    switch (words[1]) {
+                        case "controversial":
+                            document.location.href = "/controversial.html";
+                            return "Switching pages...";
+                    }
+                }
+                break;
             case "help":
-                return "ls - lists files in a directory\ncat - reads files\nclear - clears the console";
+                return "ls - lists files in a directory\ncat - reads files\nclear - clears the console\npages - lists this website's pages\n ssh - lets you switch between pages";
         }
     }
     return "Invalid command";
