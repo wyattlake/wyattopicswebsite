@@ -1,86 +1,31 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
+    background-color: black;
+    color: #15ff00;
+    font-family: "Monaco", monospace;
     padding: 0;
+    margin: 20px;
+    font-size: 15px;
 }
 
-.page-section {
-    padding: 20px;
-    margin: 20px 0;
-    border: 1px solid #ccc;
+input {
+    border: none;
+    background: transparent;
+    color: #15ff00;
+    outline: none;
+    font-family: "Monaco", monospace;
+    font-size: 15px;
 }
 
-#section1 {
-    color: transparent;
-    animation: rainbow 5s linear infinite;
+.inputArea {
+    display: flex;
+    flex-direction: row;
 }
 
-#section2 {
-    color: transparent;
-    animation: rainbow 5s linear infinite;
+.inputArea > input {
+    padding: 0;
+    flex-grow: 1;
 }
 
-#section3 {
-    color: transparent;
-    animation: rainbow 5s linear infinite;
-}
-
-@keyframes rainbow {
-    0% {
-        color: red;
-    }
-    14% {
-        color: orange;
-    }
-    28% {
-        color: yellow;
-    }
-    42% {
-        color: green;
-    }
-    57% {
-        color: blue;
-    }
-    71% {
-        color: indigo;
-    }
-    85% {
-        color: violet;
-    }
-    100% {
-        color: red;
-    }
-}
-
-@keyframes rotate {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-h1 {
-    font-size: 36px;
-    font-weight: bold;
-    background: linear-gradient(
-        45deg,
-        red,
-        orange,
-        yellow,
-        green,
-        blue,
-        indigo,
-        violet
-    );
-    -webkit-background-clip: text;
-    color: transparent;
-    transform-origin: center;
-    animation: rainbow 5s linear infinite;
-}
-
-* {
-    transform-origin: center;
-    animation: rotate 10s linear infinite;
+p {
+    margin: 5px 00px;
 }
