@@ -413,6 +413,18 @@ function setup() {
             if (ctrlDown) {
                 textDiv.innerHTML = "";
             }
+        } else if (event.key === "c") {
+            if (ctrlDown) {
+                const oldCommand = document.createElement("p");
+                oldCommand.textContent =
+                    prefix.textContent + " " + inputElement.value;
+                textDiv.appendChild(oldCommand);
+
+                commandList.push(inputElement.value);
+                commandIdx = commandList.length;
+
+                inputElement.value = "";
+            }
         }
     });
 
