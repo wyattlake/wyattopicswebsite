@@ -1,4 +1,7 @@
 currentDirectory = "wyattlake";
+commandList = [];
+commandIdx = 0;
+currentCommandInput = "";
 
 addedEventListeners = false;
 
@@ -240,7 +243,56 @@ function parseInput(input) {
     return ["none", "Invalid command"];
 }
 
+ctrlDown = false;
+
 function setup() {
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Control") {
+            ctrlDown = true;
+        } else if (event.key === "ArrowUp") {
+            const inputElement = document.getElementById("myText");
+            if (commandIdx == commandList.length) {
+                currentCommandInput = inputElement.value;
+            }
+            if (commandList.length == 0) {
+                inputElement.value = "";
+                commandIdx = -1;
+            } else {
+                if (commandIdx > 0) {
+                    commandIdx--;
+                }
+
+                inputElement.value = commandList[commandIdx];
+
+                inputElement.focus();
+                window.setTimeout(function () {
+                    inputElement.setSelectionRange(
+                        inputElement.value.length,
+                        inputElement.value.length
+                    );
+                }, 0);
+            }
+        } else if (event.key === "ArrowDown") {
+            const inputElement = document.getElementById("myText");
+
+            if (commandIdx < commandList.length) {
+                commandIdx++;
+            }
+
+            if (commandIdx == commandList.length) {
+                inputElement.value = currentCommandInput;
+            } else {
+                inputElement.value = commandList[commandIdx];
+            }
+
+            inputElement.focus();
+        }
+    });
+    document.addEventListener("keyup", function (event) {
+        if (event.key === "Control") {
+            ctrlDown = false;
+        }
+    });
     document.addEventListener("keypress", function (event) {
         addedEventListeners = true;
 
@@ -287,7 +339,6 @@ function setup() {
                     textDiv.innerHTML = "";
 
                     headChildren = document.head.children;
-                    console.log(currentPage);
 
                     for (i = 0; i < headChildren.length; i++) {
                         if (
@@ -354,8 +405,20 @@ function setup() {
                 }
             }
 
+            commandList.push(inputElement.value);
+            commandIdx = commandList.length;
             inputElement.value = "";
             window.scrollTo(0, document.body.scrollHeight);
+        } else if (event.key === "l") {
+            if (ctrlDown) {
+                textDiv.innerHTML = "";
+            }
         }
+    });
+
+    document.addEventListener("click", function () {
+        const inputElement = document.getElementById("myText");
+
+        inputElement.focus();
     });
 }
