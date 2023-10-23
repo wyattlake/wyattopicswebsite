@@ -369,6 +369,10 @@ function setup() {
 
                     inputArea.style.display = "flex";
 
+                    commandList = [];
+                    commandIdx = 0;
+                    currentCommandInput = "";
+
                     currentPage = pageToAdd;
                 }, 500);
             } else if (
