@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Canvas Example</title>
+    </head>
+    <body>
+        <canvas id="myCanvas" width="800" height="600"></canvas>
+
+        <script>
+            // JavaScript code for interacting with the canvas will go here
+            const canvas = document.getElementById("myCanvas");
+            const ctx = canvas.getContext("2d");
+
+            map =
+                "1111111111\n1      1 1\n1      1 1\n1      1 1\n1      1 1\n11111  1 1\n1        1\n1        1\n1        1\n1111111111";
+
+            lines = map.split("\n");
+            tileSize = canvas.height / lines.length;
+
+            function projectMapToCanvas(map) {
+                for (let row = 0; row < lines.length; row++) {
+                    for (let col = 0; col < lines[row].length; col++) {
+                        const char = lines[row][col];
+                        if (char === " ") {
+                            ctx.fillStyle = "white";
+                        } else if (!isNaN(char)) {
+                            ctx.fillStyle = "black";
+                        }
+
+                        ctx.fillRect(
+                            col * tileSize,
+                            row * tileSize,
+                            tileSize,
+                            tileSize
+                        );
+                    }
+                }
+            }
+
+            function drawPlayer(x, y, map) {
+                const playerSize = 4; // Size of the player pixel
+                ctx.fillStyle = "red"; // Color of the player
+                ctx.fillRect(
+                    x * tileSize - playerSize / 2,
+                    y * tileSize - playerSize / 2,
+                    playerSize,
+                    playerSize
+                );
+            }
+
+            const playerX = 1.7;
+            const playerY = 1.5;
+            const playerAngle = 1;
+
+            function getValueFromMap(map, x, y) {
+                const ys = map.split("\n");
+
+                if (y >= 0 && y < ys.length && x >= 0 && x < ys[y].length) {
+                    return ys[y][x];
+                }
+
+                return null;
+            }
+
+            function castRay(playerX, playerY, playerAngle) {
+                const maxDistance = 20; // Maximum raycasting distance
+                const rayX = playerX;
+                const rayY = playerY;
+
+                ctx.fillStyle = "green"; // Color for the ray
+
+                for (
+                    let distance = 0;
+                    distance < maxDistance;
+                    distance += 0.05
+                ) {
+                    const testX = rayX + Math.cos(playerAngle) * distance;
+                    const testY = rayY + Math.sin(playerAngle) * distance;
+
+                    if (
+                        getValueFromMap(
+                            map,
+                            Math.floor(testX),
+                            Math.floor(testY)
+                        ) != " "
+                    ) {
+                        break;
+                    }
+                    ctx.fillRect(testX * tileSize, testY * tileSize, 1, 1);
+                }
+            }
+
+            projectMapToCanvas(map);
+
+            drawPlayer(playerX, playerY);
+
+            castRay(playerX, playerY, playerAngle);
+        </script>
+    </body>
+</html>
