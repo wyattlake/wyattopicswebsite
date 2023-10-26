@@ -51,6 +51,7 @@
             const playerX = 1.7;
             const playerY = 1.5;
             const playerAngle = 1;
+            const fov = Math.PI / 3.0;
 
             function getValueFromMap(map, x, y) {
                 const ys = map.split("\n");
@@ -90,11 +91,19 @@
                 }
             }
 
+            function projectPlayerVision(playerX, playerY, playerAngle, fov) {
+                const rays = 512;
+                for (i = 0; i < rays; i++) {
+                    angle = playerAngle - fov / 2 + fov * (i / rays);
+                    castRay(playerX, playerY, angle);
+                }
+            }
+
             projectMapToCanvas(map);
 
             drawPlayer(playerX, playerY);
 
-            castRay(playerX, playerY, playerAngle);
+            projectPlayerVision(playerX, playerY, playerAngle, fov);
         </script>
     </body>
 </html>
