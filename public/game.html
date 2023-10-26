@@ -52,9 +52,9 @@
                 );
             }
 
-            const playerX = 1.7;
-            const playerY = 1.5;
-            const playerAngle = 1;
+            playerX = 1.7;
+            playerY = 1.5;
+            playerAngle = 1;
             const fov = Math.PI / 3.0;
 
             function getValueFromMap(map, x, y) {
@@ -83,22 +83,23 @@
                     const testX = rayX + Math.cos(playerAngle) * distance;
                     const testY = rayY + Math.sin(playerAngle) * distance;
 
-                    if (
-                        getValueFromMap(
-                            map,
-                            Math.floor(testX),
-                            Math.floor(testY)
-                        ) != " "
-                    ) {
-                        return distance;
+                    mapValue = getValueFromMap(
+                        map,
+                        Math.floor(testX),
+                        Math.floor(testY)
+                    );
+
+                    if (mapValue != " ") {
+                        return [distance, mapValue];
                         break;
                     }
+
                     mapCtx.fillRect(testX * tileSize, testY * tileSize, 1, 1);
                 }
                 return null;
             }
 
-            function projectPlayerVision(playerX, playerY, playerAngle, fov) {
+            function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
                 const gameWidth = 200;
                 const canvasScale = gameCanvas.width / gameWidth;
 
@@ -123,11 +124,42 @@
                 }
             }
 
-            projectMapToCanvas(map);
+            function clearCanvas(canvas, context) {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+            }
 
-            drawPlayer(playerX, playerY);
+            function sleep(ms) {
+                return new Promise((resolve) => setTimeout(resolve, ms));
+            }
 
-            projectPlayerVision(playerX, playerY, playerAngle, fov);
+            async function drawLoop() {
+                for (
+                    angleDelta = 0;
+                    angleDelta < 2 * Math.PI;
+                    angleDelta += 0.1
+                ) {
+                    console.log("hi");
+                    clearCanvas(gameCanvas, gameCtx);
+                    clearCanvas(mapCanvas, mapCtx);
+
+                    playerAngle = angleDelta;
+
+                    projectMapToCanvas(map);
+                    drawPlayer(playerX, playerY);
+
+                    drawPlayerPerspective(playerX, playerY, playerAngle, fov);
+
+                    await sleep(100);
+                }
+            }
+
+            async function main() {
+                while (true) {
+                    await drawLoop();
+                }
+            }
+
+            main();
         </script>
     </body>
 </html>
