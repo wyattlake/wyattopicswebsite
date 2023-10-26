@@ -190,12 +190,38 @@
                 const turnSpeedFactor = turnSpeed * timeElapsed;
 
                 if (movingForward) {
-                    playerX += walkSpeedFactor * Math.cos(playerAngle);
-                    playerY += walkSpeedFactor * Math.sin(playerAngle);
+                    newPlayerX =
+                        playerX + walkSpeedFactor * Math.cos(playerAngle);
+                    newPlayerY =
+                        playerY + walkSpeedFactor * Math.sin(playerAngle);
+
+                    if (
+                        getValueFromMap(
+                            map,
+                            Math.floor(newPlayerX),
+                            Math.floor(newPlayerY)
+                        ) == " "
+                    ) {
+                        playerX = newPlayerX;
+                        playerY = newPlayerY;
+                    }
                 }
                 if (movingBackward) {
-                    playerX -= walkSpeedFactor * Math.cos(playerAngle);
-                    playerY -= walkSpeedFactor * Math.sin(playerAngle);
+                    newPlayerX =
+                        playerX - walkSpeedFactor * Math.cos(playerAngle);
+                    newPlayerY =
+                        playerY - walkSpeedFactor * Math.sin(playerAngle);
+
+                    if (
+                        getValueFromMap(
+                            map,
+                            Math.floor(newPlayerX),
+                            Math.floor(newPlayerY)
+                        ) == " "
+                    ) {
+                        playerX = newPlayerX;
+                        playerY = newPlayerY;
+                    }
                 }
 
                 if (turningLeft) {
