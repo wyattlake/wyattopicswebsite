@@ -16,7 +16,7 @@
             const gameCtx = gameCanvas.getContext("2d");
 
             map =
-                "1111111111\n1      1 1\n1      1 1\n1      1 1\n1      1 1\n11111  1 1\n1        1\n1        1\n1        1\n1111111111";
+                "1110001111\n0      1 1\n0      1 1\n0      1 1\n1      1 1\n22222  2 1\n1        1\n1        1\n1        1\n0000000000";
 
             lines = map.split("\n");
             tileSize = mapCanvas.height / lines.length;
@@ -25,10 +25,20 @@
                 for (let row = 0; row < lines.length; row++) {
                     for (let col = 0; col < lines[row].length; col++) {
                         const char = lines[row][col];
-                        if (char === " ") {
-                            mapCtx.fillStyle = "white";
-                        } else if (!isNaN(char)) {
-                            mapCtx.fillStyle = "black";
+
+                        switch (char) {
+                            case " ":
+                                mapCtx.fillStyle = "white";
+                                break;
+                            case "0":
+                                mapCtx.fillStyle = "green";
+                                break;
+                            case "1":
+                                mapCtx.fillStyle = "blue";
+                                break;
+                            case "2":
+                                mapCtx.fillStyle = "red";
+                                break;
                         }
 
                         mapCtx.fillRect(
@@ -73,7 +83,7 @@
                 const rayX = playerX;
                 const rayY = playerY;
 
-                mapCtx.fillStyle = "green"; // Color for the ray
+                mapCtx.fillStyle = "black"; // Color for the ray
 
                 for (
                     let distance = 0;
@@ -105,14 +115,35 @@
 
                 for (i = 0; i < gameWidth; i++) {
                     angle = playerAngle - fov / 2 + fov * (i / gameWidth);
-                    distance = castRay(playerX, playerY, angle);
+                    result = castRay(playerX, playerY, angle);
 
-                    if (distance != null) {
+                    if (result != null) {
+                        distance = result[0];
+                        hitObject = result[1];
+
                         fisheye_fix = Math.cos(angle - playerAngle);
                         wallHeight =
                             gameCanvas.height / (distance * fisheye_fix);
 
-                        gameCtx.fillStyle = "blue";
+                        intensity = 1 - distance / maxDistance;
+
+                        switch (hitObject) {
+                            case "0":
+                                gameCtx.fillStyle = `rgb(0, ${
+                                    255 * intensity
+                                }, 0)`;
+                                break;
+                            case "1":
+                                gameCtx.fillStyle = `rgb(0, 0, ${
+                                    255 * intensity
+                                })`;
+                                break;
+                            case "2":
+                                gameCtx.fillStyle = `rgb(${
+                                    255 * intensity
+                                }, 0, 0)`;
+                                break;
+                        }
 
                         gameCtx.fillRect(
                             i * canvasScale,
@@ -132,34 +163,49 @@
                 return new Promise((resolve) => setTimeout(resolve, ms));
             }
 
-            async function drawLoop() {
-                for (
-                    angleDelta = 0;
-                    angleDelta < 2 * Math.PI;
-                    angleDelta += 0.1
-                ) {
-                    console.log("hi");
-                    clearCanvas(gameCanvas, gameCtx);
-                    clearCanvas(mapCanvas, mapCtx);
+            async function drawScene() {
+                clearCanvas(gameCanvas, gameCtx);
+                clearCanvas(mapCanvas, mapCtx);
 
-                    playerAngle = angleDelta;
+                gameCtx.fillStyle = "black";
+                gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
-                    projectMapToCanvas(map);
-                    drawPlayer(playerX, playerY);
+                projectMapToCanvas(map);
+                drawPlayer(playerX, playerY);
 
-                    drawPlayerPerspective(playerX, playerY, playerAngle, fov);
+                drawPlayerPerspective(playerX, playerY, playerAngle, fov);
 
-                    await sleep(100);
-                }
+                await sleep(20);
             }
 
-            async function main() {
+            async function gameLoop() {
                 while (true) {
-                    await drawLoop();
+                    await drawScene();
                 }
             }
 
-            main();
+            document.addEventListener("keydown", (event) => {
+                const walkSpeed = 0.2;
+                const turnSpeed = 0.1;
+                switch (event.key) {
+                    case "w":
+                        playerX += walkSpeed * Math.cos(playerAngle);
+                        playerY += walkSpeed * Math.sin(playerAngle);
+                        break;
+                    case "s":
+                        playerX += -walkSpeed * Math.cos(playerAngle);
+                        playerY += -walkSpeed * Math.sin(playerAngle);
+                        break;
+                    case "a":
+                        playerAngle -= turnSpeed;
+                        break;
+                    case "d":
+                        playerAngle += turnSpeed;
+                        break;
+                }
+            });
+
+            gameLoop();
         </script>
     </body>
 </html>
