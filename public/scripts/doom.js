@@ -50,8 +50,8 @@ function projectMapToCanvas() {
 }
 
 function drawPlayer(x, y, map) {
-    const playerSize = 4; // Size of the player pixel
-    mapCtx.fillStyle = "red"; // Color of the player
+    const playerSize = 10; // Size of the player pixel
+    mapCtx.fillStyle = "green"; // Color of the player
     mapCtx.fillRect(
         x * tileSize - playerSize / 2,
         y * tileSize - playerSize / 2,
@@ -153,10 +153,21 @@ function drawScene() {
     gameCtx.fillStyle = "black";
     gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
+    const grd = gameCtx.createLinearGradient(0, 0, 0, gameCanvas.height);
+    grd.addColorStop(1, "rgb(255, 255, 255)");
+
+    grd.addColorStop(0.5, `rgb(150, 150, 150)`);
+    grd.addColorStop(0, "rgb(255, 255, 255)");
+
+    // Fill with gradient
+    gameCtx.fillStyle = grd;
+    gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+
     projectMapToCanvas(map);
-    drawPlayer(playerX, playerY);
 
     drawPlayerPerspective(playerX, playerY, playerAngle, fov);
+
+    drawPlayer(playerX, playerY);
 }
 
 movingForward = false;
