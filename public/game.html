@@ -67,7 +67,7 @@
                 return null;
             }
 
-            const maxDistance = 20;
+            const maxDistance = lines.length * 1.5;
 
             function castRay(playerX, playerY, playerAngle) {
                 const rayX = playerX;
@@ -104,12 +104,12 @@
 
                 for (i = 0; i < gameWidth; i++) {
                     angle = playerAngle - fov / 2 + fov * (i / gameWidth);
-                    rayPosition = castRay(playerX, playerY, angle);
+                    distance = castRay(playerX, playerY, angle);
 
-                    if (rayPosition != null) {
+                    if (distance != null) {
+                        fisheye_fix = Math.cos(angle - playerAngle);
                         wallHeight =
-                            gameCanvas.height *
-                            ((maxDistance - rayPosition) / maxDistance);
+                            gameCanvas.height / (distance * fisheye_fix);
 
                         gameCtx.fillStyle = "blue";
 
