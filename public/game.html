@@ -1,33 +1,37 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Canvas Example</title>
+        <title>mapCanvas Example</title>
     </head>
     <body>
-        <canvas id="myCanvas" width="800" height="600"></canvas>
+        <canvas id="mapCanvas" width="600" height="600"></canvas>
+        <canvas id="gameCanvas" width="600" height="600"></canvas>
 
         <script>
-            // JavaScript code for interacting with the canvas will go here
-            const canvas = document.getElementById("myCanvas");
-            const ctx = canvas.getContext("2d");
+            // JavaScript code for interacting with the mapCanvas will go here
+            const mapCanvas = document.getElementById("mapCanvas");
+            const mapCtx = mapCanvas.getContext("2d");
+
+            const gameCanvas = document.getElementById("gameCanvas");
+            const gameCtx = gameCanvas.getContext("2d");
 
             map =
                 "1111111111\n1      1 1\n1      1 1\n1      1 1\n1      1 1\n11111  1 1\n1        1\n1        1\n1        1\n1111111111";
 
             lines = map.split("\n");
-            tileSize = canvas.height / lines.length;
+            tileSize = mapCanvas.height / lines.length;
 
             function projectMapToCanvas(map) {
                 for (let row = 0; row < lines.length; row++) {
                     for (let col = 0; col < lines[row].length; col++) {
                         const char = lines[row][col];
                         if (char === " ") {
-                            ctx.fillStyle = "white";
+                            mapCtx.fillStyle = "white";
                         } else if (!isNaN(char)) {
-                            ctx.fillStyle = "black";
+                            mapCtx.fillStyle = "black";
                         }
 
-                        ctx.fillRect(
+                        mapCtx.fillRect(
                             col * tileSize,
                             row * tileSize,
                             tileSize,
@@ -39,8 +43,8 @@
 
             function drawPlayer(x, y, map) {
                 const playerSize = 4; // Size of the player pixel
-                ctx.fillStyle = "red"; // Color of the player
-                ctx.fillRect(
+                mapCtx.fillStyle = "red"; // Color of the player
+                mapCtx.fillRect(
                     x * tileSize - playerSize / 2,
                     y * tileSize - playerSize / 2,
                     playerSize,
@@ -63,12 +67,13 @@
                 return null;
             }
 
+            const maxDistance = 20;
+
             function castRay(playerX, playerY, playerAngle) {
-                const maxDistance = 20; // Maximum raycasting distance
                 const rayX = playerX;
                 const rayY = playerY;
 
-                ctx.fillStyle = "green"; // Color for the ray
+                mapCtx.fillStyle = "green"; // Color for the ray
 
                 for (
                     let distance = 0;
@@ -85,17 +90,36 @@
                             Math.floor(testY)
                         ) != " "
                     ) {
+                        return distance;
                         break;
                     }
-                    ctx.fillRect(testX * tileSize, testY * tileSize, 1, 1);
+                    mapCtx.fillRect(testX * tileSize, testY * tileSize, 1, 1);
                 }
+                return null;
             }
 
             function projectPlayerVision(playerX, playerY, playerAngle, fov) {
-                const rays = 512;
-                for (i = 0; i < rays; i++) {
-                    angle = playerAngle - fov / 2 + fov * (i / rays);
-                    castRay(playerX, playerY, angle);
+                const gameWidth = 200;
+                const canvasScale = gameCanvas.width / gameWidth;
+
+                for (i = 0; i < gameWidth; i++) {
+                    angle = playerAngle - fov / 2 + fov * (i / gameWidth);
+                    rayPosition = castRay(playerX, playerY, angle);
+
+                    if (rayPosition != null) {
+                        wallHeight =
+                            gameCanvas.height *
+                            ((maxDistance - rayPosition) / maxDistance);
+
+                        gameCtx.fillStyle = "blue";
+
+                        gameCtx.fillRect(
+                            i * canvasScale,
+                            (gameCanvas.height - wallHeight) / 2,
+                            canvasScale,
+                            wallHeight
+                        );
+                    }
                 }
             }
 
