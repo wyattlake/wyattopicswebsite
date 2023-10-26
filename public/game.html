@@ -6,6 +6,7 @@
     <body>
         <canvas id="mapCanvas" width="600" height="600"></canvas>
         <canvas id="gameCanvas" width="600" height="600"></canvas>
+        <canvas id="textureCanvas" width="10" height="10"></canvas>
 
         <script>
             // JavaScript code for interacting with the mapCanvas will go here
@@ -88,7 +89,7 @@
                 for (
                     let distance = 0;
                     distance < maxDistance;
-                    distance += 0.03
+                    distance += 0.02
                 ) {
                     const testX = rayX + Math.cos(playerAngle) * distance;
                     const testY = rayY + Math.sin(playerAngle) * distance;
@@ -129,9 +130,9 @@
 
                         switch (hitObject) {
                             case "0":
-                                gameCtx.fillStyle = `rgb(${255 * intensity}, ${
+                                gameCtx.fillStyle = `rgb(0, ${
                                     255 * intensity
-                                }, ${255 * intensity})`;
+                                }, 0)`;
                                 break;
                             case "1":
                                 gameCtx.fillStyle = `rgb(0, 0, ${
@@ -186,7 +187,6 @@
 
             function updatePosition(timeElapsed) {
                 const walkSpeedFactor = walkSpeed * timeElapsed;
-                console.log(walkSpeedFactor);
                 const turnSpeedFactor = turnSpeed * timeElapsed;
 
                 if (movingForward) {
@@ -235,14 +235,35 @@
 
             const renderDelay = 40;
 
+            let textureCanvas = document.getElementById("textureCanvas");
+            let textureContext = textureCanvas.getContext("2d");
+
+            function loadTexture(width, height) {
+                const image = new Image(width, height);
+                image.onload = drawImage;
+                image.src = "images/alexTexture.png";
+            }
+
+            function getPixel(x, y) {
+                console.log(textureContext.getImageData(x, y, 1, 1).data);
+            }
+
+            function drawImage() {
+                let canvas = document.getElementById("textureCanvas");
+                let ctx = canvas.getContext("2d");
+                canvas.width = this.width;
+                canvas.height = this.height;
+                ctx.drawImage(this, 0, 0, this.width, this.height);
+            }
+
             async function gameLoop() {
                 pastTime = performance.now();
                 while (true) {
                     const currentTime = performance.now();
                     const timeElapsed = currentTime - pastTime;
-                    updatePosition(timeElapsed);
 
                     const renderStartTime = performance.now();
+                    updatePosition(timeElapsed);
                     drawScene();
                     const renderEndTime = performance.now();
                     const renderTime = renderEndTime - renderStartTime;
@@ -291,6 +312,7 @@
                 }
             });
 
+            loadTexture(10, 10);
             gameLoop();
         </script>
     </body>
