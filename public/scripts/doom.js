@@ -24,6 +24,32 @@ map =
 lines = map.split("\n");
 tileSize = mapCanvas.height / lines.length;
 
+// Player variables
+playerX = 1.7;
+playerY = 1.5;
+playerAngle = 1;
+
+// Player controller variables
+movingForward = false;
+movingBackward = false;
+turningLeft = false;
+turningRight = false;
+
+// Rendering constants
+const frameDelay = 40;
+const fov = Math.PI / 3.0;
+const maxDistance = lines.length * 1.5;
+const rayCount = 60;
+const rayStep = 0.03;
+
+// Player constants
+const walkSpeed = 0.003;
+const turnSpeed = 0.0015;
+
+class Sprite {
+    constructor(x, y, texture) {}
+}
+
 function projectMapToCanvas() {
     for (let row = 0; row < lines.length; row++) {
         for (let col = 0; col < lines[row].length; col++) {
@@ -60,11 +86,6 @@ function drawPlayer(x, y, map) {
     );
 }
 
-playerX = 1.7;
-playerY = 1.5;
-playerAngle = 1;
-const fov = Math.PI / 3.0;
-
 function getValueFromMap(map, x, y) {
     const ys = map.split("\n");
 
@@ -75,15 +96,13 @@ function getValueFromMap(map, x, y) {
     return null;
 }
 
-const maxDistance = lines.length * 1.5;
-
 function castRay(playerX, playerY, playerAngle) {
     const rayX = playerX;
     const rayY = playerY;
 
     mapCtx.fillStyle = "black"; // Color for the ray
 
-    for (let distance = 0; distance < maxDistance; distance += 0.02) {
+    for (let distance = 0; distance < maxDistance; distance += rayStep) {
         const testX = rayX + Math.cos(playerAngle) * distance;
         const testY = rayY + Math.sin(playerAngle) * distance;
 
@@ -91,7 +110,6 @@ function castRay(playerX, playerY, playerAngle) {
 
         if (mapValue != " ") {
             return [distance, mapValue];
-            break;
         }
 
         mapCtx.fillRect(testX * tileSize, testY * tileSize, 1, 1);
@@ -100,11 +118,10 @@ function castRay(playerX, playerY, playerAngle) {
 }
 
 function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
-    const gameWidth = 60;
-    const canvasScale = gameCanvas.width / gameWidth;
+    const canvasScale = gameCanvas.width / rayCount;
 
-    for (i = 0; i < gameWidth; i++) {
-        angle = playerAngle - fov / 2 + fov * (i / gameWidth);
+    for (i = 0; i < rayCount; i++) {
+        angle = playerAngle - fov / 2 + fov * (i / rayCount);
         result = castRay(playerX, playerY, angle);
 
         if (result != null) {
@@ -170,14 +187,6 @@ function drawScene() {
     drawPlayer(playerX, playerY);
 }
 
-movingForward = false;
-movingBackward = false;
-turningLeft = false;
-turningRight = false;
-
-const walkSpeed = 0.003;
-const turnSpeed = 0.0015;
-
 function updatePosition(timeElapsed) {
     const walkSpeedFactor = walkSpeed * timeElapsed;
     const turnSpeedFactor = turnSpeed * timeElapsed;
@@ -222,19 +231,18 @@ function updatePosition(timeElapsed) {
     }
 }
 
-const renderDelay = 40;
-
-let textureCanvas = document.getElementById("textureCanvas");
-let textureContext = textureCanvas.getContext("2d");
-
-function loadTexture(width, height) {
+function loadTexture(width, height, src) {
+    let textureCanvas = document.getElementById("textureCanvas");
+    let textureContext = textureCanvas.getContext("2d");
     const image = new Image(width, height);
     image.onload = drawImage;
-    image.src = "images/alexTexture.png";
+    image.src = src;
+
+    return textureContext;
 }
 
-function getPixel(x, y) {
-    console.log(textureContext.getImageData(x, y, 1, 1).data);
+function getPixel(x, y, texture) {
+    console.log(texture.getImageData(x, y, 1, 1).data);
 }
 
 function drawImage() {
@@ -257,8 +265,8 @@ async function gameLoop() {
         const renderEndTime = performance.now();
         const renderTime = renderEndTime - renderStartTime;
 
-        if (renderTime < renderDelay) {
-            await sleep(renderDelay - renderTime);
+        if (renderTime < frameDelay) {
+            await sleep(frameDelay - renderTime);
         } else {
             await sleep(1);
         }
@@ -301,5 +309,5 @@ document.addEventListener("keyup", (event) => {
     }
 });
 
-loadTexture(10, 10);
+alexTexture = loadTexture(10, 10, "images/alexTexture.png");
 gameLoop();
