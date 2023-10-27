@@ -40,11 +40,11 @@ const frameDelay = 17;
 const fov = Math.PI / 3.0;
 const maxDistance = mapLines.length * 1.5;
 const rayCount = 100;
-const rayStep = 0.05;
-const textureResolution = 64;
+const textureResolution = 100;
 const canvasScale = gameCanvas.width / rayCount;
 
 depthMap = new Array(rayCount);
+score = 0;
 
 // Player constants
 const walkSpeed = 0.003;
@@ -88,6 +88,9 @@ class Sprite {
         );
 
         this.angle = Math.atan2(this.y - playerY, this.x - playerX);
+
+        while (this.angle - playerAngle > Math.PI) this.angle -= 2 * Math.PI;
+        while (this.angle - playerAngle < -Math.PI) this.angle += 2 * Math.PI;
     }
 }
 
@@ -101,7 +104,7 @@ function projectMapToCanvas() {
                     mapCtx.fillStyle = "white";
                     break;
                 case "0":
-                    mapCtx.fillStyle = "green";
+                    mapCtx.fillStyle = "rgb(0, 220, 0)";
                     break;
                 case "1":
                     mapCtx.fillStyle = "blue";
@@ -117,7 +120,7 @@ function projectMapToCanvas() {
 }
 
 function drawPlayer(x, y) {
-    mapCtx.fillStyle = "green"; // Color of the player
+    mapCtx.fillStyle = "rgb(0, 220, 0)"; // Color of the player
     mapCtx.fillRect(
         x * tileSize - playerSize / 2,
         y * tileSize - playerSize / 2,
@@ -246,19 +249,19 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
 
             switch (hitObject) {
                 case "0":
-                    gameCtx.fillStyle = `rgb(${100 * intensity}, ${
-                        100 * intensity
-                    }, ${100 * intensity})`;
+                    gameCtx.fillStyle = `rgb(${0 * intensity}, ${
+                        255 * intensity
+                    }, ${0 * intensity})`;
                     break;
                 case "1":
-                    gameCtx.fillStyle = `rgb(${255 * intensity}, ${
-                        255 * intensity
+                    gameCtx.fillStyle = `rgb(${0 * intensity}, ${
+                        0 * intensity
                     }, ${255 * intensity})`;
                     break;
                 case "2":
                     gameCtx.fillStyle = `rgb(${255 * intensity}, ${
-                        255 * intensity
-                    }, ${255 * intensity})`;
+                        0 * intensity
+                    }, ${0 * intensity})`;
                     break;
             }
 
@@ -274,9 +277,6 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
 }
 
 function drawSprite(sprite) {
-    while (sprite.angle - playerAngle > Math.PI) sprite.angle -= 2 * Math.PI;
-    while (sprite.angle - playerAngle < -Math.PI) sprite.angle += 2 * Math.PI;
-
     spriteSize = gameCanvas.height / sprite.distance;
 
     xOffset =
@@ -381,16 +381,77 @@ function updateEnemies(enemies) {
     });
 }
 
-function shootEnemies() {
-    for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
-        enemy = enemies[enemyIdx];
-        xOffset = enemy.distance * Math.abs(Math.sin(angle - enemy.angle));
+const audio = document.createElement("audio");
+audio.src = "audio/gunshot.mp3";
+shooting = false;
 
-        console.log(xOffset);
-        if (xOffset < 0.3) {
-            console.log("hit");
+async function shootEnemies() {
+    const newAudio = audio.cloneNode();
+    newAudio.play();
+    shooting = true;
+
+    await sleep(100);
+    for (enemyIdx = enemies.length - 1; enemyIdx >= 0; enemyIdx--) {
+        enemy = enemies[enemyIdx];
+
+        if (Math.abs(playerAngle - enemy.angle) > fov / 2.0) continue;
+        xOffset =
+            enemy.distance * Math.abs(Math.sin(playerAngle - enemy.angle));
+
+        if (xOffset < 0.4) {
+            result = castRay(playerX, playerY, playerAngle);
+            if (enemy.distance > result[0] && result[1] != " ") {
+                continue;
+            } else {
+                enemies.splice(enemyIdx, 1);
+                score++;
+                break;
+            }
         }
     }
+
+    await sleep(500);
+
+    shooting = false;
+}
+
+function drawGUI() {
+    gameCtx.font = "30px Comic Sans MS";
+    gameCtx.fillStyle = "red";
+    gameCtx.textAlign = "left";
+    gameCtx.fillText("Score: " + score, 20, 50);
+
+    image = document.getElementById("gun");
+    gunHeight = 170;
+    gameCtx.drawImage(
+        image,
+        gameCanvas.width / 2 - 175,
+        gameCanvas.height - gunHeight,
+        250,
+        gunHeight
+    );
+}
+
+function drawWin(gameTime) {
+    gameCtx.font = "50px Comic Sans MS";
+    gameCtx.fillStyle = "yellow";
+    gameCtx.textAlign = "center";
+    gameCtx.fillText("You win!", gameCanvas.width / 2, gameCanvas.height / 2);
+
+    gameCtx.font = "20px Comic Sans MS";
+    gameCtx.fillStyle = "green";
+    gameCtx.fillText(
+        "Press R to restart",
+        gameCanvas.width / 2,
+        gameCanvas.height / 2 + 30
+    );
+
+    gameCtx.fillStyle = "orange";
+    gameCtx.fillText(
+        gameTime + " seconds",
+        gameCanvas.width / 2,
+        gameCanvas.height / 2 - 45
+    );
 }
 
 function updatePosition(timeElapsed) {
@@ -455,7 +516,25 @@ function drawImage() {
     ctx.drawImage(this, 0, 0, this.width, this.height);
 }
 
+finalFrame = false;
+
 async function gameLoop() {
+    finalFrame = false;
+    score = 0;
+
+    playerX = 1.7;
+    playerY = 1.5;
+    playerAngle = 1;
+
+    enemies = [
+        new Sprite(5.0, 2.0, "images/alexTexture.png"),
+        new Sprite(13.0, 3.0, "images/alexTexture.png"),
+        new Sprite(7.0, 7.0, "images/alexTexture.png"),
+        new Sprite(8.0, 9.0, "images/alexTexture.png"),
+        new Sprite(2.0, 13.0, "images/alexTexture.png"),
+    ];
+
+    gameStartTime = performance.now();
     pastTime = performance.now();
     while (true) {
         const currentTime = performance.now();
@@ -468,6 +547,8 @@ async function gameLoop() {
         const renderEndTime = performance.now();
         const renderTime = renderEndTime - renderStartTime;
 
+        drawGUI();
+
         if (renderTime < frameDelay) {
             await sleep(frameDelay - renderTime);
         } else {
@@ -475,11 +556,33 @@ async function gameLoop() {
         }
 
         pastTime = currentTime;
+
+        if (finalFrame) {
+            break;
+        }
+
+        if (score == 5) {
+            finalFrame = true;
+        }
     }
+    gameEndTime = performance.now();
+
+    gameTime = (gameEndTime - gameStartTime) / 1000;
+
+    const audio = document.createElement("audio");
+    audio.src = "audio/cheer.mp3";
+    audio.play();
+
+    drawWin(gameTime);
 }
 
 document.addEventListener("keydown", (event) => {
     switch (event.key) {
+        case " ":
+            if (!shooting) {
+                shootEnemies(enemies);
+            }
+            break;
         case "w":
             movingForward = true;
             break;
@@ -497,9 +600,6 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("keyup", (event) => {
     switch (event.key) {
-        case " ":
-            shootEnemies(enemies);
-            break;
         case "w":
             movingForward = false;
             break;
@@ -512,13 +612,14 @@ document.addEventListener("keyup", (event) => {
         case "d":
             turningRight = false;
             break;
+        case "r":
+            if (finalFrame) {
+                gameLoop();
+            }
+            break;
     }
 });
 
-enemies = [
-    new Sprite(5.0, 2.0, "images/alexTexture.png"),
-    new Sprite(6.0, 3.0, "images/alexTexture.png"),
-    new Sprite(7.0, 7.0, "images/alexTexture.png"),
-];
+enemies = [];
 
 gameLoop();
