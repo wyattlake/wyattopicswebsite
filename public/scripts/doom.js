@@ -40,14 +40,46 @@ const frameDelay = 40;
 const fov = Math.PI / 3.0;
 const maxDistance = lines.length * 1.5;
 const rayCount = 60;
-const rayStep = 0.03;
+const rayStep = 0.05;
+const textureResolution = 64;
+const canvasScale = gameCanvas.width / rayCount;
+
+depthMap = new Array(rayCount);
 
 // Player constants
 const walkSpeed = 0.003;
 const turnSpeed = 0.0015;
 
+// Map Constants
+const playerSize = 10;
+const enemySize = 10;
+
 class Sprite {
-    constructor(x, y, texture) {}
+    constructor(x, y, textureSource) {
+        this.x = x;
+        this.y = y;
+        this.resolution = textureResolution;
+        this.texture = loadTexture(
+            textureResolution,
+            textureResolution,
+            textureSource
+        );
+    }
+
+    loadSpriteTextureData() {
+        this.textureData = new Array(this.resolution)
+            .fill(null)
+            .map(() => new Array(this.resolution).fill(null));
+        for (let i = 0; i < this.resolution; i++) {
+            for (let j = 0; j < this.resolution; j++) {
+                this.textureData[i][j] = this.getPixelRaw(i, j);
+            }
+        }
+    }
+
+    getPixelRaw(x, y) {
+        return this.texture.getImageData(x, y, 1, 1).data;
+    }
 }
 
 function projectMapToCanvas() {
@@ -75,8 +107,7 @@ function projectMapToCanvas() {
     }
 }
 
-function drawPlayer(x, y, map) {
-    const playerSize = 10; // Size of the player pixel
+function drawPlayer(x, y) {
     mapCtx.fillStyle = "green"; // Color of the player
     mapCtx.fillRect(
         x * tileSize - playerSize / 2,
@@ -84,6 +115,20 @@ function drawPlayer(x, y, map) {
         playerSize,
         playerSize
     );
+}
+
+function drawMapEnemies(enemies) {
+    mapCtx.fillStyle = "red";
+
+    for (i = 0; i < enemies.length; i++) {
+        enemy = enemies[i];
+        mapCtx.fillRect(
+            enemy.x * tileSize - enemySize / 2,
+            enemy.y * tileSize - enemySize / 2,
+            enemySize,
+            enemySize
+        );
+    }
 }
 
 function getValueFromMap(map, x, y) {
@@ -111,15 +156,11 @@ function castRay(playerX, playerY, playerAngle) {
         if (mapValue != " ") {
             return [distance, mapValue];
         }
-
-        mapCtx.fillRect(testX * tileSize, testY * tileSize, 1, 1);
     }
     return null;
 }
 
 function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
-    const canvasScale = gameCanvas.width / rayCount;
-
     for (i = 0; i < rayCount; i++) {
         angle = playerAngle - fov / 2 + fov * (i / rayCount);
         result = castRay(playerX, playerY, angle);
@@ -151,7 +192,73 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
                 canvasScale,
                 wallHeight
             );
+
+            depthMap[i] = distance;
         }
+    }
+}
+
+function drawSprite(sprite) {
+    spriteAngle = Math.atan2(sprite.y - playerY, sprite.x - playerX);
+
+    while (spriteAngle - playerAngle > Math.PI) spriteAngle -= 2 * Math.PI;
+    while (spriteAngle - playerAngle < -Math.PI) spriteAngle += 2 * Math.PI;
+
+    spriteDistance = Math.sqrt(
+        Math.pow(playerX - sprite.x, 2) + Math.pow(playerY - sprite.y, 2)
+    );
+
+    spriteSize = gameCanvas.width / spriteDistance;
+
+    xOffset =
+        ((spriteAngle - playerAngle) / fov) * gameCanvas.width +
+        gameCanvas.width / 2 -
+        spriteSize / 2;
+    yOffset = gameCanvas.width / 2 - spriteSize / 2;
+
+    pixelScale = spriteSize / sprite.resolution;
+
+    for (i = 0; i < sprite.resolution; i++) {
+        pixelXOffset = xOffset + i * pixelScale;
+        if (depthMap[Math.floor(pixelXOffset / canvasScale)] < spriteDistance)
+            continue;
+        if (pixelXOffset + pixelScale > 0 && pixelXOffset <= gameCanvas.width) {
+            for (j = 0; j < sprite.resolution; j++) {
+                pixelYOffset = yOffset + j * pixelScale;
+                if (
+                    pixelXOffset + pixelScale > 0 &&
+                    pixelYOffset <= gameCanvas.height
+                ) {
+                    if (sprite.textureData == null) {
+                        sprite.loadSpriteTextureData();
+                    }
+
+                    texturePixel = sprite.textureData[i][j];
+
+                    intensity = 1 - spriteDistance / maxDistance;
+
+                    if (texturePixel[3] > 200) {
+                        gameCtx.fillStyle = `rgb(${
+                            texturePixel[0] * intensity
+                        }, ${texturePixel[1] * intensity}, ${
+                            texturePixel[2] * intensity
+                        })`;
+                        gameCtx.fillRect(
+                            pixelXOffset - 1,
+                            pixelYOffset,
+                            pixelScale + 1,
+                            pixelScale + 1
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+function drawEnemies(enemies) {
+    for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
+        drawSprite(enemies[enemyIdx]);
     }
 }
 
@@ -173,7 +280,7 @@ function drawScene() {
     const grd = gameCtx.createLinearGradient(0, 0, 0, gameCanvas.height);
     grd.addColorStop(1, "rgb(255, 255, 255)");
 
-    grd.addColorStop(0.5, `rgb(150, 150, 150)`);
+    grd.addColorStop(0.5, `rgb(100, 100, 100)`);
     grd.addColorStop(0, "rgb(255, 255, 255)");
 
     // Fill with gradient
@@ -183,8 +290,10 @@ function drawScene() {
     projectMapToCanvas(map);
 
     drawPlayerPerspective(playerX, playerY, playerAngle, fov);
-
     drawPlayer(playerX, playerY);
+
+    drawEnemies(enemies);
+    drawMapEnemies(enemies);
 }
 
 function updatePosition(timeElapsed) {
@@ -239,10 +348,6 @@ function loadTexture(width, height, src) {
     image.src = src;
 
     return textureContext;
-}
-
-function getPixel(x, y, texture) {
-    console.log(texture.getImageData(x, y, 1, 1).data);
 }
 
 function drawImage() {
@@ -309,5 +414,9 @@ document.addEventListener("keyup", (event) => {
     }
 });
 
-alexTexture = loadTexture(10, 10, "images/alexTexture.png");
+enemies = [
+    new Sprite(5.0, 2.0, "images/alexTexture.png"),
+    new Sprite(6.0, 3.0, "images/alexTexture.png"),
+];
+
 gameLoop();

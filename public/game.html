@@ -4,9 +4,19 @@
         <title>mapCanvas Example</title>
         <script defer src="scripts/doom.js"></script>
     </head>
+    <style>
+        .texture {
+            display: none;
+        }
+    </style>
     <body>
         <canvas id="mapCanvas" width="600" height="600"></canvas>
         <canvas id="gameCanvas" width="600" height="600"></canvas>
-        <canvas id="textureCanvas" width="10" height="10"></canvas>
+        <canvas
+            id="textureCanvas"
+            class="texture"
+            width="10"
+            height="10"
+        ></canvas>
     </body>
 </html>
