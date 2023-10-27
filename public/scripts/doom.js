@@ -21,8 +21,8 @@ map =
     "1             1\n" +
     "101010101010101";
 
-lines = map.split("\n");
-tileSize = mapCanvas.height / lines.length;
+mapLines = map.split("\n");
+tileSize = mapCanvas.height / mapLines.length;
 
 // Player variables
 playerX = 1.7;
@@ -36,10 +36,10 @@ turningLeft = false;
 turningRight = false;
 
 // Rendering constants
-const frameDelay = 40;
+const frameDelay = 17;
 const fov = Math.PI / 3.0;
-const maxDistance = lines.length * 1.5;
-const rayCount = 60;
+const maxDistance = mapLines.length * 1.5;
+const rayCount = 100;
 const rayStep = 0.05;
 const textureResolution = 64;
 const canvasScale = gameCanvas.width / rayCount;
@@ -86,13 +86,15 @@ class Sprite {
         this.distance = Math.sqrt(
             Math.pow(playerX - this.x, 2) + Math.pow(playerY - this.y, 2)
         );
+
+        this.angle = Math.atan2(this.y - playerY, this.x - playerX);
     }
 }
 
 function projectMapToCanvas() {
-    for (let row = 0; row < lines.length; row++) {
-        for (let col = 0; col < lines[row].length; col++) {
-            const char = lines[row][col];
+    for (let row = 0; row < mapLines.length; row++) {
+        for (let col = 0; col < mapLines[row].length; col++) {
+            const char = mapLines[row][col];
 
             switch (char) {
                 case " ":
@@ -148,29 +150,90 @@ function getValueFromMap(map, x, y) {
     return null;
 }
 
-function castRay(playerX, playerY, playerAngle) {
-    const rayX = playerX;
-    const rayY = playerY;
+// function castRayOld(playerX, playerY, playerAngle) {
+//     const rayX = playerX;
+//     const rayY = playerY;
 
-    mapCtx.fillStyle = "black"; // Color for the ray
+//     mapCtx.fillStyle = "black"; // Color for the ray
 
-    for (let distance = 0; distance < maxDistance; distance += rayStep) {
-        const testX = rayX + Math.cos(playerAngle) * distance;
-        const testY = rayY + Math.sin(playerAngle) * distance;
+//     for (let distance = 0; distance < maxDistance; distance += rayStep) {
+//         const testX = rayX + Math.cos(playerAngle) * distance;
+//         const testY = rayY + Math.sin(playerAngle) * distance;
 
-        mapValue = getValueFromMap(map, Math.floor(testX), Math.floor(testY));
+//         mapValue = getValueFromMap(map, Math.floor(testX), Math.floor(testY));
 
-        if (mapValue != " ") {
-            return [distance, mapValue];
+//         if (mapValue != " ") {
+//             return [distance, mapValue];
+//         }
+//     }
+//     return null;
+// }
+
+function castRay(x, y, angle) {
+    dirX = Math.cos(angle);
+    dirY = Math.sin(angle);
+
+    curX = x;
+    curY = y;
+
+    tileX = Math.floor(curX);
+    tileY = Math.floor(curY);
+
+    dirSignX = dirX > 0 ? 1 : -1;
+    dirSignY = dirY > 0 ? 1 : -1;
+
+    tileOffsetX = dirX > 0 ? 1 : 0;
+    tileOffsetY = dirY > 0 ? 1 : 0;
+
+    t = 0;
+
+    if (dirX * dirX + dirY * dirY > 0) {
+        while (
+            tileX > 0 &&
+            tileX < mapLines[0].length &&
+            tileY > 0 &&
+            tileY < mapLines.length
+        ) {
+            dtX = (tileX + tileOffsetX - curX) / dirX;
+            dtY = (tileY + tileOffsetY - curY) / dirY;
+
+            if (dtX < dtY) {
+                t = t + dtX;
+                tileX = tileX + dirSignX;
+            } else {
+                t = t + dtY;
+                tileY = tileY + dirSignY;
+            }
+
+            curX = x + dirX * t;
+            curY = y + dirY * t;
+
+            mapValue = getValueFromMap(map, tileX, tileY);
+            if (mapValue != " ") {
+                return [t, mapValue];
+            }
         }
     }
+
     return null;
 }
 
 function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
-    for (i = 0; i < rayCount; i++) {
-        angle = playerAngle - fov / 2 + fov * (i / rayCount);
+    for (rayIdx = 0; rayIdx < rayCount; rayIdx++) {
+        angle = playerAngle - fov / 2 + fov * (rayIdx / rayCount);
         result = castRay(playerX, playerY, angle);
+
+        if (rayIdx == 0 || rayIdx == rayCount - 1) {
+            mapCtx.fillStyle = "black";
+            mapCtx.beginPath();
+            mapCtx.moveTo(playerX * tileSize, playerY * tileSize);
+            mapCtx.lineTo(
+                (playerX + Math.cos(angle) * result[0]) * tileSize,
+                (playerY + Math.sin(angle) * result[0]) * tileSize
+            );
+
+            mapCtx.stroke();
+        }
 
         if (result != null) {
             distance = result[0];
@@ -183,38 +246,41 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
 
             switch (hitObject) {
                 case "0":
-                    gameCtx.fillStyle = `rgb(0, ${255 * intensity}, 0)`;
+                    gameCtx.fillStyle = `rgb(${100 * intensity}, ${
+                        100 * intensity
+                    }, ${100 * intensity})`;
                     break;
                 case "1":
-                    gameCtx.fillStyle = `rgb(0, 0, ${255 * intensity})`;
+                    gameCtx.fillStyle = `rgb(${255 * intensity}, ${
+                        255 * intensity
+                    }, ${255 * intensity})`;
                     break;
                 case "2":
-                    gameCtx.fillStyle = `rgb(${255 * intensity}, 0, 0)`;
+                    gameCtx.fillStyle = `rgb(${255 * intensity}, ${
+                        255 * intensity
+                    }, ${255 * intensity})`;
                     break;
             }
 
             gameCtx.fillRect(
-                i * canvasScale,
+                rayIdx * canvasScale,
                 (gameCanvas.height - wallHeight) / 2,
                 canvasScale,
                 wallHeight
             );
-
-            depthMap[i] = distance;
+            depthMap[rayIdx] = distance;
         }
     }
 }
 
 function drawSprite(sprite) {
-    spriteAngle = Math.atan2(sprite.y - playerY, sprite.x - playerX);
+    while (sprite.angle - playerAngle > Math.PI) sprite.angle -= 2 * Math.PI;
+    while (sprite.angle - playerAngle < -Math.PI) sprite.angle += 2 * Math.PI;
 
-    while (spriteAngle - playerAngle > Math.PI) spriteAngle -= 2 * Math.PI;
-    while (spriteAngle - playerAngle < -Math.PI) spriteAngle += 2 * Math.PI;
-
-    spriteSize = gameCanvas.width / sprite.distance;
+    spriteSize = gameCanvas.height / sprite.distance;
 
     xOffset =
-        ((spriteAngle - playerAngle) / fov) * gameCanvas.width +
+        ((sprite.angle - playerAngle) / fov) * gameCanvas.width +
         gameCanvas.width / 2 -
         spriteSize / 2;
     yOffset = gameCanvas.width / 2 - spriteSize / 2;
@@ -247,7 +313,7 @@ function drawSprite(sprite) {
                             texturePixel[2] * intensity
                         })`;
                         gameCtx.fillRect(
-                            pixelXOffset - 1,
+                            pixelXOffset,
                             pixelYOffset,
                             pixelScale + 1,
                             pixelScale + 1
@@ -260,15 +326,6 @@ function drawSprite(sprite) {
 }
 
 function drawEnemies(enemies) {
-    enemies.sort(function (x, y) {
-        if (x.distance < y.distance) {
-            return 1;
-        } else if (x.distance > y.distance) {
-            return -1;
-        } else {
-            return 0;
-        }
-    });
     for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
         drawSprite(enemies[enemyIdx]);
     }
@@ -308,9 +365,31 @@ function drawScene() {
     drawMapEnemies(enemies);
 }
 
-function updateEnemies() {
+function updateEnemies(enemies) {
     for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
         enemies[enemyIdx].updateDistance();
+    }
+
+    enemies.sort(function (x, y) {
+        if (x.distance < y.distance) {
+            return 1;
+        } else if (x.distance > y.distance) {
+            return -1;
+        } else {
+            return 0;
+        }
+    });
+}
+
+function shootEnemies() {
+    for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
+        enemy = enemies[enemyIdx];
+        xOffset = enemy.distance * Math.abs(Math.sin(angle - enemy.angle));
+
+        console.log(xOffset);
+        if (xOffset < 0.3) {
+            console.log("hit");
+        }
     }
 }
 
@@ -384,7 +463,7 @@ async function gameLoop() {
 
         const renderStartTime = performance.now();
         updatePosition(timeElapsed);
-        updateEnemies();
+        updateEnemies(enemies);
         drawScene();
         const renderEndTime = performance.now();
         const renderTime = renderEndTime - renderStartTime;
@@ -418,6 +497,9 @@ document.addEventListener("keydown", (event) => {
 
 document.addEventListener("keyup", (event) => {
     switch (event.key) {
+        case " ":
+            shootEnemies(enemies);
+            break;
         case "w":
             movingForward = false;
             break;
@@ -436,6 +518,7 @@ document.addEventListener("keyup", (event) => {
 enemies = [
     new Sprite(5.0, 2.0, "images/alexTexture.png"),
     new Sprite(6.0, 3.0, "images/alexTexture.png"),
+    new Sprite(7.0, 7.0, "images/alexTexture.png"),
 ];
 
 gameLoop();
