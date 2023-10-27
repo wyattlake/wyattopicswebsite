@@ -64,6 +64,7 @@ class Sprite {
             textureResolution,
             textureSource
         );
+        this.distance = 0;
     }
 
     loadSpriteTextureData() {
@@ -79,6 +80,12 @@ class Sprite {
 
     getPixelRaw(x, y) {
         return this.texture.getImageData(x, y, 1, 1).data;
+    }
+
+    updateDistance() {
+        this.distance = Math.sqrt(
+            Math.pow(playerX - this.x, 2) + Math.pow(playerY - this.y, 2)
+        );
     }
 }
 
@@ -204,11 +211,7 @@ function drawSprite(sprite) {
     while (spriteAngle - playerAngle > Math.PI) spriteAngle -= 2 * Math.PI;
     while (spriteAngle - playerAngle < -Math.PI) spriteAngle += 2 * Math.PI;
 
-    spriteDistance = Math.sqrt(
-        Math.pow(playerX - sprite.x, 2) + Math.pow(playerY - sprite.y, 2)
-    );
-
-    spriteSize = gameCanvas.width / spriteDistance;
+    spriteSize = gameCanvas.width / sprite.distance;
 
     xOffset =
         ((spriteAngle - playerAngle) / fov) * gameCanvas.width +
@@ -220,7 +223,7 @@ function drawSprite(sprite) {
 
     for (i = 0; i < sprite.resolution; i++) {
         pixelXOffset = xOffset + i * pixelScale;
-        if (depthMap[Math.floor(pixelXOffset / canvasScale)] < spriteDistance)
+        if (depthMap[Math.floor(pixelXOffset / canvasScale)] < sprite.distance)
             continue;
         if (pixelXOffset + pixelScale > 0 && pixelXOffset <= gameCanvas.width) {
             for (j = 0; j < sprite.resolution; j++) {
@@ -235,7 +238,7 @@ function drawSprite(sprite) {
 
                     texturePixel = sprite.textureData[i][j];
 
-                    intensity = 1 - spriteDistance / maxDistance;
+                    intensity = 1 - sprite.distance / maxDistance;
 
                     if (texturePixel[3] > 200) {
                         gameCtx.fillStyle = `rgb(${
@@ -257,6 +260,15 @@ function drawSprite(sprite) {
 }
 
 function drawEnemies(enemies) {
+    enemies.sort(function (x, y) {
+        if (x.distance < y.distance) {
+            return 1;
+        } else if (x.distance > y.distance) {
+            return -1;
+        } else {
+            return 0;
+        }
+    });
     for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
         drawSprite(enemies[enemyIdx]);
     }
@@ -294,6 +306,12 @@ function drawScene() {
 
     drawEnemies(enemies);
     drawMapEnemies(enemies);
+}
+
+function updateEnemies() {
+    for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
+        enemies[enemyIdx].updateDistance();
+    }
 }
 
 function updatePosition(timeElapsed) {
@@ -366,6 +384,7 @@ async function gameLoop() {
 
         const renderStartTime = performance.now();
         updatePosition(timeElapsed);
+        updateEnemies();
         drawScene();
         const renderEndTime = performance.now();
         const renderTime = renderEndTime - renderStartTime;
