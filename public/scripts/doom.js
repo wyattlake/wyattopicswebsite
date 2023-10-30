@@ -39,8 +39,8 @@ turningRight = false;
 const frameDelay = 17;
 const fov = Math.PI / 3.0;
 const maxDistance = mapLines.length * 1.5;
-const rayCount = 100;
-const textureResolution = 100;
+const rayCount = 150;
+const textureResolution = 64;
 const canvasScale = gameCanvas.width / rayCount;
 
 depthMap = new Array(rayCount);
@@ -64,8 +64,6 @@ class Texture {
     }
 
     loadTexture(width, height, src) {
-        console.log("loading");
-
         var textureCanvas = document.createElement("canvas");
         let textureContext = textureCanvas.getContext("2d");
 
@@ -89,12 +87,9 @@ class Texture {
                     ).data;
                 }
             }
-            console.log(this.textureData);
         };
 
         image.src = src;
-
-        return textureContext;
     }
 
     getPixel(x, y) {
@@ -102,15 +97,47 @@ class Texture {
     }
 }
 
-textures = [new Texture("images/alexTexture.png", textureResolution)];
+class WallTexture {
+    constructor(source, resolution) {
+        this.source = source;
+        this.resolution = resolution;
 
-// window.onload = loadTextures();
+        this.loadTexture(this.resolution, this.resolution, this.source);
+    }
 
-// function loadTextures() {
-//     for (i = 0; i < textures.length; i++) {
-//         textures[i].loadTexture();
-//     }
-// }
+    loadTexture(width, height, src) {
+        var textureCanvas = document.createElement("canvas");
+        let textureContext = textureCanvas.getContext("2d");
+
+        const image = new Image(width, height);
+
+        image.onload = () => {
+            textureCanvas.width = image.width;
+            textureCanvas.height = image.height;
+            textureContext.drawImage(image, 0, 0, image.width, image.height);
+
+            this.textureData = new Array(width).fill(null);
+
+            for (let i = 0; i < this.resolution; i++) {
+                this.textureData[i] = textureContext.getImageData(
+                    i,
+                    0,
+                    1,
+                    height
+                ).data;
+            }
+        };
+
+        image.src = src;
+    }
+
+    getPixel(x, y) {
+        return this.textureData[x][y];
+    }
+}
+
+alexTexture = new Texture("images/alexTexture.png", textureResolution);
+wallTexture = new WallTexture("images/wallTexture.png", textureResolution);
 
 class Sprite {
     constructor(x, y, texture) {
@@ -248,7 +275,7 @@ function castRay(x, y, angle) {
 
             mapValue = getValueFromMap(map, tileX, tileY);
             if (mapValue != " ") {
-                return [t, mapValue];
+                return [t, mapValue, curX, curY];
             }
         }
     }
@@ -300,12 +327,46 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
                     break;
             }
 
-            gameCtx.fillRect(
-                rayIdx * canvasScale,
-                (gameCanvas.height - wallHeight) / 2,
-                canvasScale,
-                wallHeight
-            );
+            cx = result[2];
+            cy = result[3];
+
+            hitX = cx - Math.floor(cx + 0.5);
+            hitY = cy - Math.floor(cy + 0.5);
+
+            let xTexcoord;
+            if (Math.abs(hitY) > Math.abs(hitX)) {
+                xTexcoord = hitY * wallTexture.resolution;
+            } else {
+                xTexcoord = hitX * wallTexture.resolution;
+            }
+
+            if (xTexcoord < 0) xTexcoord += wallTexture.resolution;
+
+            yScale = wallHeight / wallTexture.resolution;
+
+            if (wallTexture.textureData != null) {
+                textureColumn = wallTexture.textureData[Math.floor(xTexcoord)];
+
+                pixX = rayIdx * canvasScale;
+                for (i = 0; i < wallTexture.resolution; i++) {
+                    pixY = i * yScale + gameCanvas.height / 2 - wallHeight / 2;
+                    if (pixY + yScale < 0 || pixY >= gameCanvas.height)
+                        continue;
+                    gameCtx.fillStyle = `rgba(${
+                        textureColumn[i * 4] * intensity
+                    }, ${textureColumn[i * 4 + 1] * intensity}, ${
+                        textureColumn[i * 4 + 2] * intensity
+                    }, ${textureColumn[i * 4 + 3] * intensity})`;
+                    gameCtx.fillRect(pixX, pixY, canvasScale, yScale + 1);
+                }
+            }
+
+            // gameCtx.fillRect(
+            //     rayIdx * canvasScale,
+            //     (gameCanvas.height - wallHeight) / 2,
+            //     canvasScale,
+            //     wallHeight
+            // );
             depthMap[rayIdx] = distance;
         }
     }
@@ -566,10 +627,6 @@ function updatePosition(timeElapsed) {
     }
 }
 
-function drawImage() {
-    console.log("drawing");
-}
-
 finalFrame = false;
 
 async function gameLoop() {
@@ -581,11 +638,11 @@ async function gameLoop() {
     playerAngle = 1;
 
     enemies = [
-        new Sprite(5.0, 2.0, textures[0]),
-        new Sprite(13.0, 3.0, textures[0]),
-        new Sprite(7.0, 7.0, textures[0]),
-        new Sprite(8.0, 9.0, textures[0]),
-        new Sprite(2.0, 13.0, textures[0]),
+        new Sprite(5.0, 2.0, alexTexture),
+        new Sprite(13.0, 3.0, alexTexture),
+        new Sprite(7.0, 7.0, alexTexture),
+        new Sprite(8.0, 9.0, alexTexture),
+        new Sprite(2.0, 13.0, alexTexture),
     ];
 
     gameStartTime = performance.now();
