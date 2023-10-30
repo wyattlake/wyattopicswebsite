@@ -45,6 +45,7 @@ const canvasScale = gameCanvas.width / rayCount;
 
 depthMap = new Array(rayCount);
 score = 0;
+playerId = null;
 
 // Player constants
 const walkSpeed = 0.003;
@@ -54,32 +55,70 @@ const turnSpeed = 0.0015;
 const playerSize = 10;
 const enemySize = 10;
 
+class Texture {
+    constructor(source, resolution) {
+        this.source = source;
+        this.resolution = resolution;
+
+        this.loadTexture(this.resolution, this.resolution, this.source);
+    }
+
+    loadTexture(width, height, src) {
+        console.log("loading");
+
+        var textureCanvas = document.createElement("canvas");
+        let textureContext = textureCanvas.getContext("2d");
+
+        const image = new Image(width, height);
+
+        image.onload = () => {
+            textureCanvas.width = image.width;
+            textureCanvas.height = image.height;
+            textureContext.drawImage(image, 0, 0, image.width, image.height);
+
+            this.textureData = new Array(this.resolution)
+                .fill(null)
+                .map(() => new Array(this.resolution).fill(null));
+            for (let i = 0; i < this.resolution; i++) {
+                for (let j = 0; j < this.resolution; j++) {
+                    this.textureData[i][j] = textureContext.getImageData(
+                        i,
+                        j,
+                        1,
+                        1
+                    ).data;
+                }
+            }
+            console.log(this.textureData);
+        };
+
+        image.src = src;
+
+        return textureContext;
+    }
+
+    getPixel(x, y) {
+        return this.textureData[x][y];
+    }
+}
+
+textures = [new Texture("images/alexTexture.png", textureResolution)];
+
+// window.onload = loadTextures();
+
+// function loadTextures() {
+//     for (i = 0; i < textures.length; i++) {
+//         textures[i].loadTexture();
+//     }
+// }
+
 class Sprite {
-    constructor(x, y, textureSource) {
+    constructor(x, y, texture) {
         this.x = x;
         this.y = y;
         this.resolution = textureResolution;
-        this.texture = loadTexture(
-            textureResolution,
-            textureResolution,
-            textureSource
-        );
+        this.texture = texture;
         this.distance = 0;
-    }
-
-    loadSpriteTextureData() {
-        this.textureData = new Array(this.resolution)
-            .fill(null)
-            .map(() => new Array(this.resolution).fill(null));
-        for (let i = 0; i < this.resolution; i++) {
-            for (let j = 0; j < this.resolution; j++) {
-                this.textureData[i][j] = this.getPixelRaw(i, j);
-            }
-        }
-    }
-
-    getPixelRaw(x, y) {
-        return this.texture.getImageData(x, y, 1, 1).data;
     }
 
     updateDistance() {
@@ -143,6 +182,21 @@ function drawMapEnemies(enemies) {
     }
 }
 
+function drawMapPlayers(players) {
+    mapCtx.fillStyle = "yellow";
+
+    for (let [currentPlayerid, currentPlayerPosition] of players) {
+        if (currentPlayerPosition != null) {
+            mapCtx.fillRect(
+                currentPlayerPosition.x * tileSize - playerSize / 2,
+                currentPlayerPosition.y * tileSize - playerSize / 2,
+                playerSize,
+                playerSize
+            );
+        }
+    }
+}
+
 function getValueFromMap(map, x, y) {
     const ys = map.split("\n");
 
@@ -152,25 +206,6 @@ function getValueFromMap(map, x, y) {
 
     return null;
 }
-
-// function castRayOld(playerX, playerY, playerAngle) {
-//     const rayX = playerX;
-//     const rayY = playerY;
-
-//     mapCtx.fillStyle = "black"; // Color for the ray
-
-//     for (let distance = 0; distance < maxDistance; distance += rayStep) {
-//         const testX = rayX + Math.cos(playerAngle) * distance;
-//         const testY = rayY + Math.sin(playerAngle) * distance;
-
-//         mapValue = getValueFromMap(map, Math.floor(testX), Math.floor(testY));
-
-//         if (mapValue != " ") {
-//             return [distance, mapValue];
-//         }
-//     }
-//     return null;
-// }
 
 function castRay(x, y, angle) {
     dirX = Math.cos(angle);
@@ -276,6 +311,20 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
     }
 }
 
+function addPlayersToSprites(players, sprites) {
+    for (let [currentPlayerid, currentPlayerPosition] of players) {
+        if (currentPlayerPosition != null) {
+            sprites.push(
+                new Sprite(
+                    currentPlayerPosition.x,
+                    currentPlayerPosition.y,
+                    null
+                )
+            );
+        }
+    }
+}
+
 function drawSprite(sprite) {
     spriteSize = gameCanvas.height / sprite.distance;
 
@@ -298,22 +347,28 @@ function drawSprite(sprite) {
                     pixelXOffset + pixelScale > 0 &&
                     pixelYOffset <= gameCanvas.height
                 ) {
-                    if (sprite.textureData == null) {
-                        sprite.loadSpriteTextureData();
-                    }
+                    if (sprite.texture != null) {
+                        texturePixel = sprite.texture.getPixel(i, j);
 
-                    texturePixel = sprite.textureData[i][j];
+                        intensity = 1 - sprite.distance / maxDistance;
 
-                    intensity = 1 - sprite.distance / maxDistance;
-
-                    if (texturePixel[3] > 200) {
-                        gameCtx.fillStyle = `rgb(${
-                            texturePixel[0] * intensity
-                        }, ${texturePixel[1] * intensity}, ${
-                            texturePixel[2] * intensity
-                        })`;
+                        if (texturePixel[3] > 200) {
+                            gameCtx.fillStyle = `rgb(${
+                                texturePixel[0] * intensity
+                            }, ${texturePixel[1] * intensity}, ${
+                                texturePixel[2] * intensity
+                            })`;
+                            gameCtx.fillRect(
+                                pixelXOffset - 1,
+                                pixelYOffset,
+                                pixelScale + 1,
+                                pixelScale + 1
+                            );
+                        }
+                    } else {
+                        gameCtx.fillStyle = "yellow";
                         gameCtx.fillRect(
-                            pixelXOffset,
+                            pixelXOffset - 1,
                             pixelYOffset,
                             pixelScale + 1,
                             pixelScale + 1
@@ -325,9 +380,9 @@ function drawSprite(sprite) {
     }
 }
 
-function drawEnemies(enemies) {
-    for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
-        drawSprite(enemies[enemyIdx]);
+function drawSprites(sprites) {
+    for (spriteIdx = 0; spriteIdx < sprites.length; spriteIdx++) {
+        drawSprite(sprites[spriteIdx]);
     }
 }
 
@@ -352,6 +407,11 @@ function drawScene() {
     grd.addColorStop(0.5, `rgb(100, 100, 100)`);
     grd.addColorStop(0, "rgb(255, 255, 255)");
 
+    sprites = [];
+    addEnemiesToSprites(enemies, sprites);
+    addPlayersToSprites(players, sprites);
+    updateSprites(sprites);
+
     // Fill with gradient
     gameCtx.fillStyle = grd;
     gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
@@ -361,16 +421,24 @@ function drawScene() {
     drawPlayerPerspective(playerX, playerY, playerAngle, fov);
     drawPlayer(playerX, playerY);
 
-    drawEnemies(enemies);
+    drawSprites(sprites);
+
     drawMapEnemies(enemies);
+    drawMapPlayers(players);
 }
 
-function updateEnemies(enemies) {
+function addEnemiesToSprites(enemies, sprites) {
     for (enemyIdx = 0; enemyIdx < enemies.length; enemyIdx++) {
-        enemies[enemyIdx].updateDistance();
+        sprites.push(enemies[enemyIdx]);
+    }
+}
+
+function updateSprites(sprites) {
+    for (spriteIdx = 0; spriteIdx < sprites.length; spriteIdx++) {
+        sprites[spriteIdx].updateDistance();
     }
 
-    enemies.sort(function (x, y) {
+    sprites.sort(function (x, y) {
         if (x.distance < y.distance) {
             return 1;
         } else if (x.distance > y.distance) {
@@ -385,9 +453,9 @@ const audio = document.createElement("audio");
 audio.src = "audio/gunshot.mp3";
 shooting = false;
 
-async function shootEnemies() {
-    const newAudio = audio.cloneNode();
-    newAudio.play();
+async function shootEnemies(enemies) {
+    // const newAudio = audio.cloneNode();
+    // newAudio.play();
     shooting = true;
 
     await sleep(100);
@@ -498,22 +566,8 @@ function updatePosition(timeElapsed) {
     }
 }
 
-function loadTexture(width, height, src) {
-    let textureCanvas = document.getElementById("textureCanvas");
-    let textureContext = textureCanvas.getContext("2d");
-    const image = new Image(width, height);
-    image.onload = drawImage;
-    image.src = src;
-
-    return textureContext;
-}
-
 function drawImage() {
-    let canvas = document.getElementById("textureCanvas");
-    let ctx = canvas.getContext("2d");
-    canvas.width = this.width;
-    canvas.height = this.height;
-    ctx.drawImage(this, 0, 0, this.width, this.height);
+    console.log("drawing");
 }
 
 finalFrame = false;
@@ -527,22 +581,24 @@ async function gameLoop() {
     playerAngle = 1;
 
     enemies = [
-        new Sprite(5.0, 2.0, "images/alexTexture.png"),
-        new Sprite(13.0, 3.0, "images/alexTexture.png"),
-        new Sprite(7.0, 7.0, "images/alexTexture.png"),
-        new Sprite(8.0, 9.0, "images/alexTexture.png"),
-        new Sprite(2.0, 13.0, "images/alexTexture.png"),
+        new Sprite(5.0, 2.0, textures[0]),
+        new Sprite(13.0, 3.0, textures[0]),
+        new Sprite(7.0, 7.0, textures[0]),
+        new Sprite(8.0, 9.0, textures[0]),
+        new Sprite(2.0, 13.0, textures[0]),
     ];
 
     gameStartTime = performance.now();
     pastTime = performance.now();
+
     while (true) {
         const currentTime = performance.now();
         const timeElapsed = currentTime - pastTime;
 
         const renderStartTime = performance.now();
+
         updatePosition(timeElapsed);
-        updateEnemies(enemies);
+
         drawScene();
         const renderEndTime = performance.now();
         const renderTime = renderEndTime - renderStartTime;
@@ -620,6 +676,8 @@ document.addEventListener("keyup", (event) => {
     }
 });
 
+sprites = [];
 enemies = [];
+players = new Map();
 
 gameLoop();

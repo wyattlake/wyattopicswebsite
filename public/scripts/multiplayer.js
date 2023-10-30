@@ -553,7 +553,9 @@ function updatePosition(timeElapsed, socket) {
 }
 
 function loadTexture(width, height, src) {
-    let textureCanvas = document.getElementById("textureCanvas");
+    let textureCanvas = document.createElement("canvas");
+    textureCanvas.className = "texture";
+    document.body.appendChild(textureCanvas);
     let textureContext = textureCanvas.getContext("2d");
     const image = new Image(width, height);
     image.onload = drawImage;
