@@ -21,13 +21,8 @@ map =
     "1             1\n" +
     "101310151013101";
 
-mapLines = map.split("\n");
+const mapLines = map.split("\n");
 // tileSize = mapCanvas.height / mapLines.length;
-
-// Player variables
-playerX = 1.7;
-playerY = 1.5;
-playerAngle = 1;
 
 // Player controller variables
 movingForward = false;
@@ -36,11 +31,10 @@ turningLeft = false;
 turningRight = false;
 
 // Rendering constants
-const frameDelay = 17;
 const fov = Math.PI / 3.0;
 const maxDistance = mapLines.length * 1.5;
-const rayCount = 300;
-const textureResolution = 64;
+const rayCount = 250;
+const textureResolution = 40;
 const canvasScale = gameCanvas.width / rayCount;
 
 depthMap = new Array(rayCount);
@@ -231,26 +225,19 @@ function drawMapPlayers(players) {
         }
     }
 }
-
-function getValueFromMap(map, x, y) {
-    const ys = map.split("\n");
-
-    if (y >= 0 && y < ys.length && x >= 0 && x < ys[y].length) {
-        return ys[y][x];
+function getValueFromMap(x, y) {
+    if (y >= 0 && y < mapLines.length && x >= 0 && x < mapLines[y].length) {
+        return mapLines[y][x];
     }
 
     return null;
 }
-
 function castRay(x, y, angle) {
     dirX = Math.cos(angle);
     dirY = Math.sin(angle);
 
-    curX = x;
-    curY = y;
-
-    tileX = Math.floor(curX);
-    tileY = Math.floor(curY);
+    tileX = Math.floor(x);
+    tileY = Math.floor(y);
 
     dirSignX = dirX > 0 ? 1 : -1;
     dirSignY = dirY > 0 ? 1 : -1;
@@ -260,6 +247,9 @@ function castRay(x, y, angle) {
 
     t = 0;
 
+    dtX = (tileX + tileOffsetX - x) / dirX;
+    dtY = (tileY + tileOffsetY - y) / dirY;
+
     if (dirX * dirX + dirY * dirY > 0) {
         while (
             tileX > 0 &&
@@ -267,23 +257,27 @@ function castRay(x, y, angle) {
             tileY > 0 &&
             tileY < mapLines.length
         ) {
-            dtX = (tileX + tileOffsetX - curX) / dirX;
-            dtY = (tileY + tileOffsetY - curY) / dirY;
+            dt = 0;
+            dTileX = 0;
+            dTileY = 0;
 
             if (dtX < dtY) {
-                t = t + dtX;
                 tileX = tileX + dirSignX;
+                dt = dtX;
+                t = t + dt;
+                dtX = dtX + dirSignX / dirX - dt;
+                dtY = dtY - dt;
             } else {
-                t = t + dtY;
                 tileY = tileY + dirSignY;
+                dt = dtY;
+                t = t + dt;
+                dtX = dtX - dt;
+                dtY = dtY + dirSignY / dirY - dt;
             }
 
-            curX = x + dirX * t;
-            curY = y + dirY * t;
-
-            mapValue = getValueFromMap(map, tileX, tileY);
+            mapValue = getValueFromMap(tileX, tileY);
             if (mapValue != " ") {
-                return [t, mapValue, curX, curY];
+                return [t, mapValue, x + dirX * t, y + dirY * t];
             }
         }
     }
@@ -393,7 +387,7 @@ function drawSprite(sprite) {
             for (j = 0; j < sprite.resolution; j++) {
                 pixelYOffset = yOffset + j * pixelScale;
                 if (
-                    pixelXOffset + pixelScale > 0 &&
+                    pixelYOffset + pixelScale > 0 &&
                     pixelYOffset <= gameCanvas.height
                 ) {
                     if (sprite.texture != null) {
@@ -444,7 +438,7 @@ function sleep(ms) {
 }
 
 function drawScene() {
-    clearCanvas(gameCanvas, gameCtx);
+    // clearCanvas(gameCanvas, gameCtx);
     // clearCanvas(mapCanvas, mapCtx);
 
     gameCtx.fillStyle = "black";
@@ -542,11 +536,24 @@ async function shootEnemies(enemies) {
     shooting = false;
 }
 
-function drawGUI() {
+timeSinceFpsUpdate = 0;
+fps = 60;
+function drawGUI(timeElapsed) {
     gameCtx.font = "30px Comic Sans MS";
     gameCtx.fillStyle = "red";
     gameCtx.textAlign = "left";
     gameCtx.fillText("Score: " + score, 20, 50);
+
+    timeSinceFpsUpdate += timeElapsed;
+    if (timeSinceFpsUpdate > 1000) {
+        timeSinceFpsUpdate = 0;
+        fps = Math.round(1000 / timeElapsed);
+    }
+
+    gameCtx.font = "15px Comic Sans MS";
+    gameCtx.fillStyle = "yellow";
+    gameCtx.textAlign = "left";
+    gameCtx.fillText("FPS: " + fps, 20, 80);
 
     image = document.getElementById("gun");
     gunHeight = 170;
@@ -590,11 +597,8 @@ function updatePosition(timeElapsed) {
         newPlayerY = playerY + walkSpeedFactor * Math.sin(playerAngle);
 
         if (
-            getValueFromMap(
-                map,
-                Math.floor(newPlayerX),
-                Math.floor(newPlayerY)
-            ) == " "
+            getValueFromMap(Math.floor(newPlayerX), Math.floor(newPlayerY)) ==
+            " "
         ) {
             playerX = newPlayerX;
             playerY = newPlayerY;
@@ -605,11 +609,8 @@ function updatePosition(timeElapsed) {
         newPlayerY = playerY - walkSpeedFactor * Math.sin(playerAngle);
 
         if (
-            getValueFromMap(
-                map,
-                Math.floor(newPlayerX),
-                Math.floor(newPlayerY)
-            ) == " "
+            getValueFromMap(Math.floor(newPlayerX), Math.floor(newPlayerY)) ==
+            " "
         ) {
             playerX = newPlayerX;
             playerY = newPlayerY;
@@ -660,7 +661,7 @@ function drawFrame(timeStamp) {
 
     drawScene();
 
-    drawGUI();
+    drawGUI(timeElapsed);
 
     previousTimeStamp = timeStamp;
 
