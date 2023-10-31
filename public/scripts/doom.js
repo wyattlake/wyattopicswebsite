@@ -1,28 +1,28 @@
-const mapCanvas = document.getElementById("mapCanvas");
-const mapCtx = mapCanvas.getContext("2d");
+// const mapCanvas = document.getElementById("mapCanvas");
+// const mapCtx = mapCanvas.getContext("2d");
 
 const gameCanvas = document.getElementById("gameCanvas");
 const gameCtx = gameCanvas.getContext("2d");
 
 map =
-    "000000000001221\n" +
+    "000606060001261\n" +
     "0          1  1\n" +
+    "0          4  1\n" +
     "0          1  1\n" +
-    "0          1  1\n" +
-    "0          1  1\n" +
+    "0          5  1\n" +
     "222222     1  1\n" +
-    "1          1  1\n" +
-    "1          1  1\n" +
-    "1          1  1\n" +
+    "1          4  2\n" +
+    "4          1  2\n" +
+    "5          1  1\n" +
     "1             1\n" +
-    "1111111       1\n" +
+    "1113311       3\n" +
     "1             1\n" +
+    "3             4\n" +
     "1             1\n" +
-    "1             1\n" +
-    "101010101010101";
+    "101310151013101";
 
 mapLines = map.split("\n");
-tileSize = mapCanvas.height / mapLines.length;
+// tileSize = mapCanvas.height / mapLines.length;
 
 // Player variables
 playerX = 1.7;
@@ -39,7 +39,7 @@ turningRight = false;
 const frameDelay = 17;
 const fov = Math.PI / 3.0;
 const maxDistance = mapLines.length * 1.5;
-const rayCount = 150;
+const rayCount = 300;
 const textureResolution = 64;
 const canvasScale = gameCanvas.width / rayCount;
 
@@ -137,7 +137,15 @@ class WallTexture {
 }
 
 alexTexture = new Texture("images/alexTexture.png", textureResolution);
-wallTexture = new WallTexture("images/wallTexture.png", textureResolution);
+wallTextures = [
+    new WallTexture("images/MARBLE1.png", textureResolution),
+    new WallTexture("images/MARBLE2.png", textureResolution),
+    new WallTexture("images/MARBLE3.png", textureResolution),
+    new WallTexture("images/MARBLOD1.png", textureResolution),
+    new WallTexture("images/MARBFACE.png", textureResolution),
+    new WallTexture("images/MARBFAC2.png", textureResolution),
+    new WallTexture("images/MARBFAC3.png", textureResolution),
+];
 
 class Sprite {
     constructor(x, y, texture) {
@@ -288,17 +296,17 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
         angle = playerAngle - fov / 2 + fov * (rayIdx / rayCount);
         result = castRay(playerX, playerY, angle);
 
-        if (rayIdx == 0 || rayIdx == rayCount - 1) {
-            mapCtx.fillStyle = "black";
-            mapCtx.beginPath();
-            mapCtx.moveTo(playerX * tileSize, playerY * tileSize);
-            mapCtx.lineTo(
-                (playerX + Math.cos(angle) * result[0]) * tileSize,
-                (playerY + Math.sin(angle) * result[0]) * tileSize
-            );
+        // if (rayIdx == 0 || rayIdx == rayCount - 1) {
+        //     mapCtx.fillStyle = "black";
+        //     mapCtx.beginPath();
+        //     mapCtx.moveTo(playerX * tileSize, playerY * tileSize);
+        //     mapCtx.lineTo(
+        //         (playerX + Math.cos(angle) * result[0]) * tileSize,
+        //         (playerY + Math.sin(angle) * result[0]) * tileSize
+        //     );
 
-            mapCtx.stroke();
-        }
+        //     mapCtx.stroke();
+        // }
 
         if (result != null) {
             distance = result[0];
@@ -309,23 +317,9 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
 
             intensity = 1 - distance / maxDistance;
 
-            switch (hitObject) {
-                case "0":
-                    gameCtx.fillStyle = `rgb(${0 * intensity}, ${
-                        255 * intensity
-                    }, ${0 * intensity})`;
-                    break;
-                case "1":
-                    gameCtx.fillStyle = `rgb(${0 * intensity}, ${
-                        0 * intensity
-                    }, ${255 * intensity})`;
-                    break;
-                case "2":
-                    gameCtx.fillStyle = `rgb(${255 * intensity}, ${
-                        0 * intensity
-                    }, ${0 * intensity})`;
-                    break;
-            }
+            textureIdx = hitObject - "0";
+
+            wallTexture = wallTextures[textureIdx];
 
             cx = result[2];
             cy = result[3];
@@ -352,21 +346,15 @@ function drawPlayerPerspective(playerX, playerY, playerAngle, fov) {
                     pixY = i * yScale + gameCanvas.height / 2 - wallHeight / 2;
                     if (pixY + yScale < 0 || pixY >= gameCanvas.height)
                         continue;
-                    gameCtx.fillStyle = `rgba(${
+                    gameCtx.fillStyle = `rgb(${
                         textureColumn[i * 4] * intensity
                     }, ${textureColumn[i * 4 + 1] * intensity}, ${
                         textureColumn[i * 4 + 2] * intensity
-                    }, ${textureColumn[i * 4 + 3] * intensity})`;
-                    gameCtx.fillRect(pixX, pixY, canvasScale, yScale + 1);
+                    })`;
+                    gameCtx.fillRect(pixX, pixY, canvasScale + 1, yScale + 1);
                 }
             }
 
-            // gameCtx.fillRect(
-            //     rayIdx * canvasScale,
-            //     (gameCanvas.height - wallHeight) / 2,
-            //     canvasScale,
-            //     wallHeight
-            // );
             depthMap[rayIdx] = distance;
         }
     }
@@ -457,16 +445,16 @@ function sleep(ms) {
 
 function drawScene() {
     clearCanvas(gameCanvas, gameCtx);
-    clearCanvas(mapCanvas, mapCtx);
+    // clearCanvas(mapCanvas, mapCtx);
 
     gameCtx.fillStyle = "black";
     gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
     const grd = gameCtx.createLinearGradient(0, 0, 0, gameCanvas.height);
-    grd.addColorStop(1, "rgb(255, 255, 255)");
+    grd.addColorStop(1, "rgb(110, 115, 100)");
 
-    grd.addColorStop(0.5, `rgb(100, 100, 100)`);
-    grd.addColorStop(0, "rgb(255, 255, 255)");
+    grd.addColorStop(0.5, `rgb(10, 15, 0)`);
+    grd.addColorStop(0, "rgb(110, 115, 100)");
 
     sprites = [];
     addEnemiesToSprites(enemies, sprites);
@@ -477,15 +465,25 @@ function drawScene() {
     gameCtx.fillStyle = grd;
     gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
 
-    projectMapToCanvas(map);
+    // projectMapToCanvas(map);
+
+    image = document.getElementById("sky");
+    gunHeight = 170;
+    // gameCtx.drawImage(
+    //     image,
+    //     0,
+    //     0,
+    //     gameCanvas.width,
+    //     gameCanvas.width * (128 / 256)
+    // );
 
     drawPlayerPerspective(playerX, playerY, playerAngle, fov);
-    drawPlayer(playerX, playerY);
+    // drawPlayer(playerX, playerY);
 
     drawSprites(sprites);
 
-    drawMapEnemies(enemies);
-    drawMapPlayers(players);
+    // drawMapEnemies(enemies);
+    // drawMapPlayers(players);
 }
 
 function addEnemiesToSprites(enemies, sprites) {
@@ -577,7 +575,7 @@ function drawWin(gameTime) {
 
     gameCtx.fillStyle = "orange";
     gameCtx.fillText(
-        gameTime + " seconds",
+        gameTime / 1000 + " seconds",
         gameCanvas.width / 2,
         gameCanvas.height / 2 - 45
     );
@@ -629,7 +627,7 @@ function updatePosition(timeElapsed) {
 
 finalFrame = false;
 
-async function gameLoop() {
+async function setupGame() {
     finalFrame = false;
     score = 0;
 
@@ -644,49 +642,37 @@ async function gameLoop() {
         new Sprite(8.0, 9.0, alexTexture),
         new Sprite(2.0, 13.0, alexTexture),
     ];
+}
 
-    gameStartTime = performance.now();
-    pastTime = performance.now();
+window.requestAnimationFrame(drawFrame);
 
-    while (true) {
-        const currentTime = performance.now();
-        const timeElapsed = currentTime - pastTime;
+let start, previousTimeStamp;
 
-        const renderStartTime = performance.now();
-
-        updatePosition(timeElapsed);
-
-        drawScene();
-        const renderEndTime = performance.now();
-        const renderTime = renderEndTime - renderStartTime;
-
-        drawGUI();
-
-        if (renderTime < frameDelay) {
-            await sleep(frameDelay - renderTime);
-        } else {
-            await sleep(1);
-        }
-
-        pastTime = currentTime;
-
-        if (finalFrame) {
-            break;
-        }
-
-        if (score == 5) {
-            finalFrame = true;
-        }
+function drawFrame(timeStamp) {
+    if (start === undefined) {
+        start = timeStamp;
+        previousTimeStamp = timeStamp;
     }
-    gameEndTime = performance.now();
 
-    gameTime = (gameEndTime - gameStartTime) / 1000;
+    const timeElapsed = timeStamp - previousTimeStamp;
 
-    const audio = document.createElement("audio");
-    audio.src = "audio/cheer.mp3";
-    audio.play();
+    updatePosition(timeElapsed);
 
-    drawWin(gameTime);
+    drawScene();
+
+    drawGUI();
+
+    previousTimeStamp = timeStamp;
+
+    if (score == 5) {
+        finalFrame = true;
+    }
+
+    if (finalFrame) {
+        drawWin(timeStamp - start);
+    } else {
+        window.requestAnimationFrame(drawFrame);
+    }
 }
 
 document.addEventListener("keydown", (event) => {
@@ -727,7 +713,8 @@ document.addEventListener("keyup", (event) => {
             break;
         case "r":
             if (finalFrame) {
-                gameLoop();
+                setupGame();
+                window.requestAnimationFrame(drawFrame);
             }
             break;
     }
@@ -737,4 +724,4 @@ sprites = [];
 enemies = [];
 players = new Map();
 
-gameLoop();
+setupGame();
